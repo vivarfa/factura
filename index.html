@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -589,7 +588,7 @@
         let currentStep = 1;
         let products = [];
         let logoDataUrl = null;
-        let nextInvoiceNumber = 1;
+        // let nextInvoiceNumber = 1; // <--- MODIFICACIÓN: Esta línea ha sido eliminada
 
         // DOM Elements
         const stepContents = document.querySelectorAll('.step-content');
@@ -605,7 +604,7 @@
             document.getElementById('invoice-date').value = today;
             
             // Generate invoice number
-            generateInvoiceNumber();
+            generateInvoiceNumber(); // MODIFICACIÓN: Llamada a la función actualizada
             
             // Add first product row
             addProductRow();
@@ -621,13 +620,17 @@
         }
 
         // Generate invoice number
+        // MODIFICACIÓN: Función actualizada para generar número aleatorio
         function generateInvoiceNumber() {
-            const paddedNumber = String(nextInvoiceNumber).padStart(8, '0');
+            // Genera un número aleatorio entre 1 y 99,999,999 (para 8 dígitos)
+            const randomNumber = Math.floor(Math.random() * 99999999) + 1;
+            const paddedNumber = String(randomNumber).padStart(8, '0');
             const invoiceNumber = `F001-${paddedNumber}`;
             document.getElementById('invoice-number').value = invoiceNumber;
             headerInvoiceNumber.textContent = invoiceNumber;
-            nextInvoiceNumber++;
+            // No se incrementa nextInvoiceNumber ya que es aleatorio
         }
+
 
         // Setup floating labels
         function setupFloatingLabels() {
@@ -640,18 +643,25 @@
                     });
                     
                     input.addEventListener('blur', () => {
-                        if (!input.value) {
-                            label.classList.remove('active');
+                        if (!input.value && !input.matches(':focus') && input.type !== 'date' && !input.readOnly) { //Evita que se desactive si tiene valor o es de tipo fecha o es readonly
+                           if (input.id === 'invoice-date' && input.value) { // Manejo especial para fecha
+                                // No hacer nada si ya tiene valor
+                           } else if (input.id !== 'invoice-date' || !input.value) {
+                               label.classList.remove('active');
+                           }
+                        } else if (input.value || input.matches(':focus') || input.type === 'date' || input.readOnly) {
+                            label.classList.add('active');
                         }
                     });
                     
-                    // Check if input has value on load
-                    if (input.value) {
+                    // Check if input has value on load or is readonly (like invoice number) or date
+                    if (input.value || input.readOnly || input.type === 'date') {
                         label.classList.add('active');
                     }
                 }
             });
         }
+
 
         // Setup event listeners
         function setupEventListeners() {
@@ -676,6 +686,7 @@
                     paymentDaysContainer.classList.remove('hidden');
                 } else {
                     paymentDaysContainer.classList.add('hidden');
+                    document.getElementById('payment-days').value = ''; // Limpiar días si no es crédito
                 }
             });
 
@@ -687,6 +698,17 @@
             formInputs.forEach(input => {
                 input.addEventListener('input', updateSummary);
                 input.addEventListener('change', updateSummary);
+                 // Para que los labels flotantes funcionen al autocompletar
+                input.addEventListener('change', () => {
+                    const label = input.parentNode.querySelector('.floating-label');
+                    if (label) {
+                        if (input.value) {
+                            label.classList.add('active');
+                        } else if (!input.matches(':focus') && input.type !== 'date' && !input.readOnly) {
+                             label.classList.remove('active');
+                        }
+                    }
+                });
             });
 
             // Generate PDF
@@ -731,31 +753,66 @@
             // Update progress sidebar
             stepItems.forEach((item, index) => {
                 const circle = item.querySelector('.step-circle');
+                const icon = circle.querySelector('i');
+                const stepNumber = index + 1;
                 const text = item.querySelector('span');
                 
+                // Reset icon for steps > current
+                if (stepNumber > currentStep && circle.innerHTML.includes('fa-check')) {
+                   const originalIconClass = circle.dataset.originalIcon || (stepNumber === 1 ? 'fa-image' : 
+                                               stepNumber === 2 ? 'fa-building' :
+                                               stepNumber === 3 ? 'fa-file-alt' :
+                                               stepNumber === 4 ? 'fa-user' :
+                                               stepNumber === 5 ? 'fa-shopping-cart' :
+                                               stepNumber === 6 ? 'fa-calculator' : 'fa-check');
+                    circle.innerHTML = `<i class="fas ${originalIconClass} text-white/60 text-sm"></i>`;
+                }
+
+
                 if (index + 1 === currentStep) {
                     item.classList.add('active');
-                    circle.classList.remove('bg-white/20');
+                    circle.classList.remove('bg-white/20', 'bg-emerald-500');
                     circle.classList.add('bg-gradient-to-r', 'from-emerald-400', 'to-blue-500');
+                    if(icon) icon.classList.remove('text-white/60');
+                    if(icon) icon.classList.add('text-white');
                     text.classList.remove('text-white/60');
                     text.classList.add('text-white', 'font-medium');
                 } else if (index + 1 < currentStep) {
-                    circle.classList.remove('bg-white/20');
+                    item.classList.remove('active');
+                    circle.classList.remove('bg-white/20', 'bg-gradient-to-r', 'from-emerald-400', 'to-blue-500');
                     circle.classList.add('bg-emerald-500');
                     circle.innerHTML = '<i class="fas fa-check text-white text-sm"></i>';
-                    text.classList.remove('text-white/60');
+                    text.classList.remove('text-white/60','font-medium');
                     text.classList.add('text-white');
-                } else {
+                } else { // Steps not yet reached or active
                     item.classList.remove('active');
                     circle.classList.add('bg-white/20');
                     circle.classList.remove('bg-gradient-to-r', 'from-emerald-400', 'to-blue-500', 'bg-emerald-500');
+                     if(icon) icon.classList.remove('text-white');
+                    if(icon) icon.classList.add('text-white/60');
                     text.classList.add('text-white/60');
                     text.classList.remove('text-white', 'font-medium');
                 }
             });
 
+             // Store original icons for reset
+            stepItems.forEach((item, index) => {
+                const circle = item.querySelector('.step-circle');
+                if (!circle.dataset.originalIcon) {
+                    const iconElement = circle.querySelector('i');
+                    if (iconElement) {
+                         // Extraer solo la clase del icono, ej: "fa-image" de "fas fa-image text-white..."
+                        const iconClass = Array.from(iconElement.classList).find(cls => cls.startsWith('fa-') && cls !== 'fas');
+                        if (iconClass) {
+                            circle.dataset.originalIcon = iconClass;
+                        }
+                    }
+                }
+            });
+
+
             // Update progress bar
-            const progressPercent = (currentStep / 7) * 100;
+            const progressPercent = ((currentStep -1) / 6) * 100; // Adjusted for 7 steps, progress from 0% to 100%
             progressBar.style.width = `${progressPercent}%`;
             progressText.textContent = `Paso ${currentStep} de 7`;
 
@@ -766,85 +823,75 @@
                     const headerHeight = document.querySelector('header').offsetHeight;
                     const stepHeader = stepContent.querySelector('div[class*="bg-gradient-to-r"]');
                     if (stepHeader) {
-                        const targetPosition = stepHeader.offsetTop + document.querySelector('.lg\\:col-span-3').offsetTop - headerHeight - 20;
-                        window.scrollTo({ 
-                            top: targetPosition, 
-                            behavior: 'smooth' 
-                        });
+                        const targetElement = document.querySelector('.lg\\:col-span-3'); // Main content area
+                        if (targetElement) {
+                             targetElement.scrollIntoView({ behavior: 'smooth', block: 'start'});
+                        }
                     }
                 }
             }, 50);
         }
 
         function validateCurrentStep() {
-            switch (currentStep) {
-                case 2:
-                    return validateCompanyData();
-                case 4:
-                    return validateClientData();
-                case 5:
-                    return validateProducts();
-                default:
-                    return true;
-            }
-        }
+            let isValid = true;
+            let firstInvalidField = null;
 
-        function validateCompanyData() {
-            const companyName = document.getElementById('company-name').value.trim();
-            const companyTaxId = document.getElementById('company-tax-id').value.trim();
-            
-            if (!companyName) {
-                alert('El nombre de la empresa es requerido');
-                document.getElementById('company-name').focus();
-                return false;
-            }
-            
-            if (!companyTaxId) {
-                alert('El RUC/NIF de la empresa es requerido');
-                document.getElementById('company-tax-id').focus();
-                return false;
-            }
-            
-            return true;
-        }
-
-        function validateClientData() {
-            const clientName = document.getElementById('client-name').value.trim();
-            
-            if (!clientName) {
-                alert('El nombre del cliente es requerido');
-                document.getElementById('client-name').focus();
-                return false;
-            }
-            
-            return true;
-        }
-
-        function validateProducts() {
-            if (products.length === 0) {
-                alert('Debe agregar al menos un producto o servicio');
-                return false;
-            }
-            
-            for (const product of products) {
-                if (!product.description.trim()) {
-                    alert('Todos los productos deben tener una descripción');
-                    return false;
+            if (currentStep === 2) { // Datos de la Empresa
+                const companyName = document.getElementById('company-name');
+                const companyTaxId = document.getElementById('company-tax-id');
+                if (!companyName.value.trim()) {
+                    alert('El nombre legal de la empresa es requerido.');
+                    if (!firstInvalidField) firstInvalidField = companyName;
+                    isValid = false;
                 }
-                
-                if (product.quantity <= 0) {
-                    alert('Las cantidades deben ser mayores a cero');
-                    return false;
+                if (!companyTaxId.value.trim()) {
+                    alert('El RUC/NIF de la empresa es requerido.');
+                    if (!firstInvalidField) firstInvalidField = companyTaxId;
+                    isValid = false;
                 }
-                
-                if (product.price < 0) {
-                    alert('Los precios no pueden ser negativos');
-                    return false;
+            } else if (currentStep === 4) { // Datos del Cliente
+                const clientName = document.getElementById('client-name');
+                if (!clientName.value.trim()) {
+                    alert('El nombre/razón social del cliente es requerido.');
+                     if (!firstInvalidField) firstInvalidField = clientName;
+                    isValid = false;
+                }
+            } else if (currentStep === 5) { // Productos/Servicios
+                if (products.length === 0) {
+                    alert('Debe agregar al menos un producto o servicio.');
+                    isValid = false;
+                } else {
+                    for (let i = 0; i < products.length; i++) {
+                        const product = products[i];
+                        const row = document.getElementById(`product-${product.id}`);
+                        if (!product.description.trim()) {
+                            alert(`El producto ${i + 1} debe tener una descripción.`);
+                            if (row && !firstInvalidField) firstInvalidField = row.querySelector('.product-description');
+                            isValid = false;
+                            break;
+                        }
+                        if (product.quantity <= 0) {
+                            alert(`La cantidad del producto "${product.description}" debe ser mayor a cero.`);
+                             if (row && !firstInvalidField) firstInvalidField = row.querySelector('input[type="number"][min="1"]');
+                            isValid = false;
+                            break;
+                        }
+                        if (product.price < 0) {
+                            alert(`El precio del producto "${product.description}" no puede ser negativo.`);
+                            if (row && !firstInvalidField) firstInvalidField = row.querySelector('input[type="number"][min="0"]');
+                            isValid = false;
+                            break;
+                        }
+                    }
                 }
             }
-            
-            return true;
+
+            if (!isValid && firstInvalidField) {
+                firstInvalidField.focus();
+            }
+            return isValid;
         }
+
 
         // Logo handling
         function handleLogoUpload(e) {
@@ -855,25 +902,27 @@
             const validTypes = ['image/png', 'image/jpeg', 'image/svg+xml'];
             if (!validTypes.includes(file.type)) {
                 alert('Por favor, suba una imagen en formato PNG, JPG o SVG');
+                e.target.value = ''; // Reset file input
                 return;
             }
             
             // Validate file size (max 2MB)
             if (file.size > 2 * 1024 * 1024) {
                 alert('El tamaño máximo permitido es 2MB');
+                e.target.value = ''; // Reset file input
                 return;
             }
             
             const reader = new FileReader();
-            reader.onload = function(e) {
-                logoDataUrl = e.target.result;
+            reader.onload = function(event) {
+                logoDataUrl = event.target.result;
                 
                 // Display preview
                 const logoPreviewContainer = document.getElementById('logo-preview-container');
-                logoPreviewContainer.innerHTML = '';
+                logoPreviewContainer.innerHTML = ''; // Clear previous content
                 const img = document.createElement('img');
                 img.src = logoDataUrl;
-                img.className = 'logo-preview mx-auto rounded-lg';
+                img.className = 'logo-preview mx-auto rounded-lg object-contain'; // Added object-contain
                 img.alt = 'Logo de la empresa';
                 logoPreviewContainer.appendChild(img);
                 
@@ -891,19 +940,19 @@
                 <p class="text-gray-500 text-sm">No hay logo cargado</p>
             `;
             document.getElementById('remove-logo').classList.add('hidden');
-            document.getElementById('logo-upload').value = '';
+            document.getElementById('logo-upload').value = ''; // Reset file input
         }
 
         // Product management
         function addProductRow(product = {}) {
-            const rowId = Date.now();
+            const rowId = Date.now(); // Unique ID for the row and product object
             const newProduct = {
                 id: rowId,
                 description: product.description || '',
                 unit: product.unit || 'Unidad',
                 quantity: product.quantity || 1,
                 price: product.price || 0,
-                discountType: product.discountType || 'percentage',
+                discountType: product.discountType || 'percentage', // 'percentage' or 'fixed'
                 discountValue: product.discountValue || 0
             };
             
@@ -911,159 +960,211 @@
             
             const tbody = document.getElementById('products-table-body');
             const row = document.createElement('tr');
-            row.id = `product-${rowId}`;
-            row.className = 'animate-slide-in border-b border-gray-200';
+            row.id = `product-${rowId}`; // Use the same ID for easy access
+            row.className = 'animate-slide-in border-b border-gray-200 align-top'; // align-top for better layout with textarea
             row.innerHTML = `
                 <td class="py-3 px-2">
-                    <textarea class="product-description w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" rows="2" placeholder="Descripción del producto/servicio" required>${newProduct.description}</textarea>
+                    <textarea data-product-id="${rowId}" class="product-input product-description w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" rows="2" placeholder="Descripción" required>${newProduct.description}</textarea>
                 </td>
-                <td class="py-3 px-2">
-                    <select class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <td class="py-3 px-2" style="min-width: 100px;">
+                    <select data-product-id="${rowId}" class="product-input product-unit w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
                         <option value="Unidad" ${newProduct.unit === 'Unidad' ? 'selected' : ''}>Unidad</option>
                         <option value="Kilo" ${newProduct.unit === 'Kilo' ? 'selected' : ''}>Kilo</option>
                         <option value="Hora" ${newProduct.unit === 'Hora' ? 'selected' : ''}>Hora</option>
                         <option value="Día" ${newProduct.unit === 'Día' ? 'selected' : ''}>Día</option>
                         <option value="Servicio" ${newProduct.unit === 'Servicio' ? 'selected' : ''}>Servicio</option>
+                        <option value="Caja" ${newProduct.unit === 'Caja' ? 'selected' : ''}>Caja</option>
+                        <option value="Paquete" ${newProduct.unit === 'Paquete' ? 'selected' : ''}>Paquete</option>
+                        <option value="Litro" ${newProduct.unit === 'Litro' ? 'selected' : ''}>Litro</option>
+                        <option value="Metro" ${newProduct.unit === 'Metro' ? 'selected' : ''}>Metro</option>
                         <option value="Otro" ${newProduct.unit === 'Otro' ? 'selected' : ''}>Otro</option>
                     </select>
                 </td>
-                <td class="py-3 px-2">
-                    <input type="number" min="1" step="1" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" value="${newProduct.quantity}">
+                <td class="py-3 px-2" style="min-width: 90px;">
+                    <input data-product-id="${rowId}" type="number" min="0.01" step="any" class="product-input product-quantity w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" value="${newProduct.quantity}">
                 </td>
-                <td class="py-3 px-2">
-                    <input type="number" min="0" step="0.01" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" value="${newProduct.price}">
+                <td class="py-3 px-2" style="min-width: 110px;">
+                    <input data-product-id="${rowId}" type="number" min="0" step="any" class="product-input product-price w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" value="${newProduct.price}">
                 </td>
-                <td class="py-3 px-2">
-                    <div class="flex gap-1">
-                        <select class="w-16 px-1 py-2 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs">
+                <td class="py-3 px-2" style="min-width: 150px;">
+                    <div class="flex gap-1 items-center">
+                        <select data-product-id="${rowId}" class="product-input product-discount-type w-auto px-2 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs">
                             <option value="percentage" ${newProduct.discountType === 'percentage' ? 'selected' : ''}>%</option>
                             <option value="fixed" ${newProduct.discountType === 'fixed' ? 'selected' : ''}>Fijo</option>
                         </select>
-                        <input type="number" min="0" step="0.01" class="w-full px-2 py-2 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm" value="${newProduct.discountValue}">
+                        <input data-product-id="${rowId}" type="number" min="0" step="any" class="product-input product-discount-value w-full px-2 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm" value="${newProduct.discountValue}">
                     </div>
                 </td>
-                <td class="py-3 px-2 font-medium text-right">
-                    <span class="product-subtotal text-green-600">${formatCurrency(calculateSubtotal(newProduct))}</span>
+                <td class="py-3 px-2 font-medium text-right" style="min-width: 100px;">
+                    <span class="product-subtotal text-gray-700">${formatCurrency(calculateSubtotal(newProduct))}</span>
                 </td>
-                <td class="py-3 px-2 text-center">
-                    <button class="remove-product text-red-500 hover:text-red-700 p-2 rounded-lg hover:bg-red-50 transition-colors">
-                        <i class="fas fa-trash"></i>
+                <td class="py-3 px-1 text-center">
+                    <button type="button" data-product-id="${rowId}" class="remove-product text-red-500 hover:text-red-700 p-2 rounded-lg hover:bg-red-50 transition-colors">
+                        <i class="fas fa-trash-alt"></i>
                     </button>
                 </td>
             `;
             
             tbody.appendChild(row);
             
-            // Add event listeners to the new row
-            const inputs = row.querySelectorAll('input, select, textarea');
-            inputs.forEach(input => {
-                input.addEventListener('change', () => updateProduct(rowId));
-                input.addEventListener('input', () => updateProduct(rowId));
+            // Add event listeners to the new row's inputs
+            row.querySelectorAll('.product-input').forEach(input => {
+                input.addEventListener('change', () => updateProductFromDOM(input.dataset.productId)); // 'change' for select and after blur on text/number
+                input.addEventListener('input', () => updateProductFromDOM(input.dataset.productId));  // 'input' for live updates on text/number
             });
             
-            const removeBtn = row.querySelector('.remove-product');
-            removeBtn.addEventListener('click', () => removeProduct(rowId));
+            row.querySelector('.remove-product').addEventListener('click', (e) => removeProduct(e.currentTarget.dataset.productId));
             
-            updateSummary();
+            updateSummary(); // Recalculate totals
         }
 
-        function updateProduct(id) {
-            const productIndex = products.findIndex(p => p.id === id);
+
+        function updateProductFromDOM(productIdStr) {
+            const productId = parseInt(productIdStr); // Ensure ID is a number if it was stored as string
+            const productIndex = products.findIndex(p => p.id === productId);
             if (productIndex === -1) return;
-            
-            const row = document.getElementById(`product-${id}`);
+
+            const row = document.getElementById(`product-${productId}`);
+            if (!row) return;
+
             const product = products[productIndex];
-            
-            product.description = row.querySelector('textarea').value;
-            product.unit = row.querySelector('td:nth-child(2) select').value;
-            product.quantity = parseFloat(row.querySelector('td:nth-child(3) input').value) || 0;
-            product.price = parseFloat(row.querySelector('td:nth-child(4) input').value) || 0;
-            product.discountType = row.querySelector('td:nth-child(5) select').value;
-            product.discountValue = parseFloat(row.querySelector('td:nth-child(5) input').value) || 0;
-            
-            // Update subtotal display
+
+            product.description = row.querySelector('.product-description').value.trim();
+            product.unit = row.querySelector('.product-unit').value;
+            product.quantity = parseFloat(row.querySelector('.product-quantity').value) || 0;
+            product.price = parseFloat(row.querySelector('.product-price').value) || 0;
+            product.discountType = row.querySelector('.product-discount-type').value;
+            product.discountValue = parseFloat(row.querySelector('.product-discount-value').value) || 0;
+
+            // Update subtotal display in the row
             const subtotalElement = row.querySelector('.product-subtotal');
-            subtotalElement.textContent = formatCurrency(calculateSubtotal(product));
+            subtotalElement.textContent = formatCurrency(calculateSubtotal(product)); // product is already updated
             
-            updateSummary();
+            updateSummary(); // Recalculate overall totals
         }
 
-        function removeProduct(id) {
-            const productIndex = products.findIndex(p => p.id === id);
+
+        function removeProduct(productIdStr) {
+            const productId = parseInt(productIdStr);
+            const productIndex = products.findIndex(p => p.id === productId);
             if (productIndex === -1) return;
             
             products.splice(productIndex, 1);
-            const row = document.getElementById(`product-${id}`);
+            const row = document.getElementById(`product-${productId}`);
             
-            row.style.transition = 'opacity 0.3s ease';
-            row.style.opacity = '0';
-            
-            setTimeout(() => {
-                row.remove();
-                updateSummary();
-            }, 300);
+            if (row) {
+                row.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                row.style.opacity = '0';
+                row.style.transform = 'translateX(20px)';
+                
+                setTimeout(() => {
+                    row.remove();
+                    updateSummary();
+                    // If no products left, and we are in step 5, it might be good to inform the user or add a placeholder
+                    if (products.length === 0 && currentStep === 5) {
+                        // Optionally add a placeholder or message in the table
+                        // document.getElementById('products-table-body').innerHTML = '<tr><td colspan="7" class="text-center py-4 text-gray-500">No hay productos agregados.</td></tr>';
+                    }
+                }, 300);
+            } else {
+                updateSummary(); // fallback if row somehow not found but product was in array
+            }
         }
 
+
         // Calculation functions
-        function calculateSubtotal(product) {
-            const subtotal = product.quantity * product.price;
-            let discount = 0;
+        function calculateSubtotal(product) { // Calculates subtotal for a single product AFTER discount
+            const grossSubtotal = product.quantity * product.price;
+            let discountAmount = 0;
             
-            if (product.discountType === 'percentage') {
-                discount = subtotal * (product.discountValue / 100);
-            } else {
-                discount = product.discountValue;
+            if (product.discountValue > 0) {
+                if (product.discountType === 'percentage') {
+                    discountAmount = grossSubtotal * (product.discountValue / 100);
+                } else { // fixed discount
+                    discountAmount = product.discountValue;
+                }
             }
-            
-            return Math.max(0, subtotal - discount);
+            // Ensure discount doesn't make subtotal negative
+            return Math.max(0, grossSubtotal - discountAmount);
         }
 
         function calculateTotals() {
-            let subtotal = 0;
-            let totalDiscount = 0;
+            let overallSubtotalBeforeDiscounts = 0; // Sum of (qty * price) for all products
+            let totalProductDiscounts = 0;          // Sum of all individual product discounts
             
             products.forEach(product => {
-                const productSubtotal = product.quantity * product.price;
-                let productDiscount = 0;
+                const productGross = product.quantity * product.price;
+                overallSubtotalBeforeDiscounts += productGross;
                 
-                if (product.discountType === 'percentage') {
-                    productDiscount = productSubtotal * (product.discountValue / 100);
-                } else {
-                    productDiscount = product.discountValue;
+                let productDiscountAmount = 0;
+                if (product.discountValue > 0) {
+                    if (product.discountType === 'percentage') {
+                        productDiscountAmount = productGross * (product.discountValue / 100);
+                    } else { // fixed
+                        productDiscountAmount = product.discountValue;
+                    }
+                    // Ensure discount doesn't exceed the product's gross price
+                    totalProductDiscounts += Math.min(productDiscountAmount, productGross);
                 }
-                
-                subtotal += productSubtotal;
-                totalDiscount += productDiscount;
             });
             
-            const netSubtotal = subtotal - totalDiscount;
+            const netSubtotalAfterProductDiscounts = overallSubtotalBeforeDiscounts - totalProductDiscounts;
+            
             const taxRate = parseFloat(document.getElementById('tax-rate').value) || 0;
             const pricesIncludeTax = document.getElementById('prices-include-tax').checked;
             
-            let tax, total;
+            let taxAmount, finalTotal;
             
             if (pricesIncludeTax) {
-                const taxMultiplier = taxRate / (100 + taxRate);
-                tax = netSubtotal * taxMultiplier;
-                total = netSubtotal;
+                // If prices ALREADY include tax, netSubtotalAfterProductDiscounts is the total. Tax is part of it.
+                // Base for tax calculation = netSubtotalAfterProductDiscounts / (1 + taxRate/100)
+                // Tax = netSubtotalAfterProductDiscounts - (netSubtotalAfterProductDiscounts / (1 + taxRate/100))
+                // Or: Tax = netSubtotalAfterProductDiscounts * (taxRate / (100 + taxRate))
+                taxAmount = netSubtotalAfterProductDiscounts * (taxRate / (100 + taxRate));
+                finalTotal = netSubtotalAfterProductDiscounts; // This is the total the customer pays
+                // The "Subtotal" displayed in summary should be Total - Tax if prices include tax.
+                // However, "Subtotal" in common invoicing usually means sum of items before tax.
+                // Let's adjust how we name/calculate what's displayed.
+                // For clarity, if prices include tax:
+                // `overallSubtotalBeforeDiscounts` (what the user inputs) already has tax.
+                // `totalProductDiscounts` also refers to discounts on tax-inclusive prices.
+                // `netSubtotalAfterProductDiscounts` is the final sum items *before* explicitly separating tax.
+
+                // If `overallSubtotalBeforeDiscounts` is `P_inc`, then `P_excl = P_inc / (1 + t)`
+                // And `Tax = P_inc - P_excl = P_inc * (t / (1+t))`
+
+                const baseForTax = netSubtotalAfterProductDiscounts / (1 + taxRate / 100);
+                taxAmount = netSubtotalAfterProductDiscounts - baseForTax;
+                finalTotal = netSubtotalAfterProductDiscounts;
+
+                 return {
+                    subtotal: baseForTax, // This would be the pre-tax subtotal
+                    discount: totalProductDiscounts, // Discount is on the tax-inclusive prices
+                    tax: taxAmount,
+                    total: finalTotal
+                };
+
             } else {
-                tax = netSubtotal * (taxRate / 100);
-                total = netSubtotal + tax;
+                // Prices DO NOT include tax. Tax is added on top.
+                taxAmount = netSubtotalAfterProductDiscounts * (taxRate / 100);
+                finalTotal = netSubtotalAfterProductDiscounts + taxAmount;
+                 return {
+                    subtotal: netSubtotalAfterProductDiscounts, // This is sum of items pre-tax, after discounts
+                    discount: totalProductDiscounts,
+                    tax: taxAmount,
+                    total: finalTotal
+                };
             }
-            
-            return {
-                subtotal: subtotal,
-                discount: totalDiscount,
-                tax: tax,
-                total: total
-            };
         }
+
 
         function updateSummary() {
             const totals = calculateTotals();
-            const currency = document.getElementById('currency').value;
-            const currencySymbol = getCurrencySymbol(currency);
+            const currencySymbol = getCurrencySymbol(document.getElementById('currency').value);
             
+            // If prices include tax, the 'summary-subtotal' should probably reflect the sum of item prices *before* tax
+            // The `calculateTotals` function now returns a 'subtotal' that is pre-tax even if inputs were tax-inclusive.
+
             document.getElementById('summary-subtotal').textContent = `${currencySymbol} ${formatNumber(totals.subtotal)}`;
             document.getElementById('summary-discount').textContent = `- ${currencySymbol} ${formatNumber(totals.discount)}`;
             document.getElementById('summary-tax').textContent = `${currencySymbol} ${formatNumber(totals.tax)}`;
@@ -1073,108 +1174,141 @@
         // Preview and PDF generation
         function updatePreview() {
             const previewContainer = document.querySelector('#invoice-preview-container .invoice-preview');
-            
-            // Generate preview HTML
             const previewHTML = generateInvoiceHTML();
             previewContainer.innerHTML = previewHTML;
         }
 
         function generateInvoiceHTML() {
-            const totals = calculateTotals();
+            const totals = calculateTotals(); // Use the unified calculation
             const currency = document.getElementById('currency').value;
             const currencySymbol = getCurrencySymbol(currency);
             const currencyName = getCurrencyName(currency);
-            
-            const companyName = document.getElementById('company-name').value;
-            const companyTaxId = document.getElementById('company-tax-id').value;
+            const taxRateValue = parseFloat(document.getElementById('tax-rate').value) || 0;
+            const pricesIncludeTax = document.getElementById('prices-include-tax').checked;
+
+            const companyName = document.getElementById('company-name').value || "Nombre de Empresa";
+            const companyTaxId = document.getElementById('company-tax-id').value || "RUC Empresa";
             const companyAddress = document.getElementById('company-address').value;
             const companyPhone = document.getElementById('company-phone').value;
             const companyEmail = document.getElementById('company-email').value;
             
-            const clientName = document.getElementById('client-name').value;
+            const clientName = document.getElementById('client-name').value || "Nombre de Cliente";
             const clientTaxId = document.getElementById('client-tax-id').value;
             const clientAddress = document.getElementById('client-address').value;
             const clientContact = document.getElementById('client-contact').value;
             
             const invoiceNumber = document.getElementById('invoice-number').value;
-            const invoiceDate = new Date(document.getElementById('invoice-date').value).toLocaleDateString('es-PE');
+            const rawInvoiceDate = document.getElementById('invoice-date').value;
+            const invoiceDate = rawInvoiceDate ? new Date(rawInvoiceDate + 'T00:00:00').toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric'}) : 'Fecha no especificada';
+
             const paymentMethod = document.getElementById('payment-method').value;
             const paymentCondition = document.getElementById('payment-condition').value;
             const paymentDays = document.getElementById('payment-days').value;
             const notes = document.getElementById('notes').value;
             
-            let companyContact = '';
-            if (companyPhone && companyEmail) {
-                companyContact = `Tel: ${companyPhone} | ${companyEmail}`;
-            } else if (companyPhone) {
-                companyContact = `Tel: ${companyPhone}`;
-            } else if (companyEmail) {
-                companyContact = companyEmail;
-            }
+            let companyContact = [companyPhone, companyEmail].filter(Boolean).join(' | ');
+            if (companyPhone) companyContact = `Tel: ${companyPhone}${companyEmail ? ' | Email: ' + companyEmail : ''}`;
+            else if (companyEmail) companyContact = `Email: ${companyEmail}`;
+            
             
             let paymentConditionText = paymentCondition;
             if (paymentCondition === 'Crédito' && paymentDays) {
-                paymentConditionText += ` (${paymentDays} días)`;
+                paymentConditionText += ` (${paymentDays} día${paymentDays > 1 ? 's' : ''})`;
             }
             
             let productsHTML = '';
+            let itemSubtotalPreTaxSum = 0; // For verification against totals.subtotal if needed
+
             products.forEach(product => {
-                const subtotal = calculateSubtotal(product);
+                const productGross = product.quantity * product.price;
+                let productDiscountAmount = 0;
+                if (product.discountValue > 0) {
+                    if (product.discountType === 'percentage') {
+                        productDiscountAmount = productGross * (product.discountValue / 100);
+                    } else {
+                        productDiscountAmount = product.discountValue;
+                    }
+                    productDiscountAmount = Math.min(productDiscountAmount, productGross); // Cap discount
+                }
+                const priceAfterDiscount = productGross - productDiscountAmount;
+
+                let displayUnitPrice = product.price;
+                let displayItemTotal = priceAfterDiscount;
+
+                if (pricesIncludeTax) {
+                    // Prices input by user include tax. We need to show the tax-exclusive unit price and tax-exclusive total.
+                    const taxMultiplier = 1 + (taxRateValue / 100);
+                    displayUnitPrice = product.price / taxMultiplier;
+                    displayItemTotal = priceAfterDiscount / taxMultiplier;
+                }
+                itemSubtotalPreTaxSum += displayItemTotal;
+
+
                 const discountText = product.discountValue > 0 ? 
                     (product.discountType === 'percentage' ? 
-                        `${product.discountValue}%` : 
+                        `${formatNumber(product.discountValue)}%` : 
                         `${currencySymbol} ${formatNumber(product.discountValue)}`) : 
                     '-';
                 
                 productsHTML += `
                     <tr class="border-b border-gray-100">
-                        <td class="py-3 px-4 text-sm">${product.description || 'Sin descripción'}</td>
+                        <td class="py-3 px-4 text-sm whitespace-pre-line">${product.description || 'N/A'}</td>
                         <td class="py-3 px-4 text-sm text-center">${product.unit}</td>
                         <td class="py-3 px-4 text-sm text-center">${product.quantity}</td>
-                        <td class="py-3 px-4 text-sm text-right">${currencySymbol} ${formatNumber(product.price)}</td>
+                        <td class="py-3 px-4 text-sm text-right">${currencySymbol} ${formatNumber(displayUnitPrice)}</td>
                         <td class="py-3 px-4 text-sm text-center">${discountText}</td>
-                        <td class="py-3 px-4 text-sm text-right font-medium">${currencySymbol} ${formatNumber(subtotal)}</td>
+                        <td class="py-3 px-4 text-sm text-right font-medium">${currencySymbol} ${formatNumber(displayItemTotal)}</td>
                     </tr>
                 `;
             });
-            
+             let taxLabel = `IGV (${taxRateValue}%)`;
+            if (pricesIncludeTax) {
+                taxLabel = `IGV (${taxRateValue}%) Incluido`;
+            }
+
+            // In the summary section of the PDF, "Subtotal" should be pre-tax.
+            // "Descuentos" should represent total discounts applied.
+            // "IGV" is the tax amount.
+            // "Total" is the final payable amount.
+            // This matches the structure of `totals` from `calculateTotals()`.
+
             return `
                 <div class="flex justify-between items-start mb-8">
-                    <div class="flex-1">
-                        ${logoDataUrl ? `<img src="${logoDataUrl}" alt="Logo" class="logo-preview mb-4">` : ''}
+                    <div class="flex-1 min-w-0">
+                        ${logoDataUrl ? `<img src="${logoDataUrl}" alt="Logo" class="logo-preview mb-4 object-contain">` : '<div class="h-20 mb-4 flex items-center justify-center border border-dashed rounded-lg text-gray-400"><p>Sin Logo</p></div>'}
                     </div>
-                    <div class="text-right">
-                        <h1 class="text-3xl font-bold text-gray-800 mb-2">FACTURA</h1>
-                        <div class="text-lg">
+                    <div class="text-right ml-4">
+                        <h1 class="text-3xl font-bold text-gray-800 mb-1 leading-tight">FACTURA</h1>
+                        <div class="text-base">
                             <p class="text-gray-600">N°: <span class="text-gray-800 font-mono font-bold">${invoiceNumber}</span></p>
                             <p class="text-gray-600">Fecha: <span class="text-gray-800">${invoiceDate}</span></p>
                         </div>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 mb-8 text-sm">
                     <div>
-                        <h2 class="text-lg font-bold text-gray-800 border-b-2 border-blue-500 pb-2 mb-3">EMISOR</h2>
-                        <div class="space-y-1">
+                        <h2 class="text-base font-bold text-gray-800 border-b-2 border-blue-500 pb-1 mb-2">EMISOR</h2>
+                        <div class="space-y-0.5">
                             <p class="font-semibold text-gray-800">${companyName}</p>
-                            <p class="text-sm text-gray-600">RUC: ${companyTaxId}</p>
-                            ${companyAddress ? `<p class="text-sm text-gray-600">${companyAddress}</p>` : ''}
-                            ${companyContact ? `<p class="text-sm text-gray-600">${companyContact}</p>` : ''}
+                            <p class="text-gray-600">RUC: ${companyTaxId}</p>
+                            ${companyAddress ? `<p class="text-gray-600">${companyAddress}</p>` : ''}
+                            ${companyContact ? `<p class="text-gray-600">${companyContact}</p>` : ''}
                         </div>
                     </div>
                     <div>
-                        <h2 class="text-lg font-bold text-gray-800 border-b-2 border-green-500 pb-2 mb-3">CLIENTE</h2>
-                        <div class="space-y-1">
+                        <h2 class="text-base font-bold text-gray-800 border-b-2 border-green-500 pb-1 mb-2">CLIENTE</h2>
+                        <div class="space-y-0.5">
                             <p class="font-semibold text-gray-800">${clientName}</p>
-                            ${clientTaxId ? `<p class="text-sm text-gray-600">${clientTaxId.length <= 11 ? 'DNI' : 'RUC'}: ${clientTaxId}</p>` : ''}
-                            ${clientAddress ? `<p class="text-sm text-gray-600">${clientAddress}</p>` : ''}
-                            ${clientContact ? `<p class="text-sm text-gray-600">${clientContact}</p>` : ''}
+                            ${clientTaxId ? `<p class="text-gray-600">${clientTaxId.length === 8 ? 'DNI' : (clientTaxId.length === 11 ? 'RUC' : 'ID')}: ${clientTaxId}</p>` : ''}
+                            ${clientAddress ? `<p class="text-gray-600">${clientAddress}</p>` : ''}
+                            ${clientContact ? `<p class="text-gray-600">${clientContact}</p>` : ''}
                         </div>
                     </div>
                 </div>
 
-                <div class="mb-6 p-4 bg-gray-50 rounded-lg">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                <div class="mb-6 p-3 bg-gray-50 rounded-lg text-xs md:text-sm">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-x-4 gap-y-2">
                         <div>
                             <span class="font-semibold text-gray-700">Método de pago:</span>
                             <span class="text-gray-600 ml-1">${paymentMethod}</span>
@@ -1185,45 +1319,45 @@
                         </div>
                         <div>
                             <span class="font-semibold text-gray-700">Moneda:</span>
-                            <span class="text-gray-600 ml-1">${currencyName} (${currency})</span>
+                            <span class="text-gray-600 ml-1">${currencyName} (${currencySymbol})</span>
                         </div>
                     </div>
                 </div>
 
-                <div class="mb-8">
-                    <table class="min-w-full bg-white border border-gray-200 rounded-lg overflow-hidden">
+                <div class="mb-8 overflow-x-auto">
+                    <table class="min-w-full bg-white border border-gray-200 rounded-lg">
                         <thead class="bg-gray-100">
                             <tr>
-                                <th class="py-3 px-4 text-left text-sm font-semibold text-gray-700">Descripción</th>
-                                <th class="py-3 px-4 text-center text-sm font-semibold text-gray-700">Unidad</th>
-                                <th class="py-3 px-4 text-center text-sm font-semibold text-gray-700">Cantidad</th>
-                                <th class="py-3 px-4 text-right text-sm font-semibold text-gray-700">Precio Unit.</th>
-                                <th class="py-3 px-4 text-center text-sm font-semibold text-gray-700">Descuento</th>
-                                <th class="py-3 px-4 text-right text-sm font-semibold text-gray-700">Subtotal</th>
+                                <th class="py-2 px-3 text-left text-xs font-semibold text-gray-700 w-2/5">Descripción</th>
+                                <th class="py-2 px-3 text-center text-xs font-semibold text-gray-700">Unidad</th>
+                                <th class="py-2 px-3 text-center text-xs font-semibold text-gray-700">Cant.</th>
+                                <th class="py-2 px-3 text-right text-xs font-semibold text-gray-700">P. Unit. ${pricesIncludeTax ? '(Sin IGV)' : ''}</th>
+                                <th class="py-2 px-3 text-center text-xs font-semibold text-gray-700">Dscto.</th>
+                                <th class="py-2 px-3 text-right text-xs font-semibold text-gray-700">Subtotal ${pricesIncludeTax ? '(Sin IGV)' : ''}</th>
                             </tr>
                         </thead>
                         <tbody>
-                            ${productsHTML}
+                            ${productsHTML.length > 0 ? productsHTML : `<tr><td colspan="6" class="text-center py-10 text-gray-500">No hay productos/servicios detallados.</td></tr>`}
                         </tbody>
                     </table>
                 </div>
 
                 <div class="flex justify-end mb-8">
-                    <div class="w-full md:w-1/2 lg:w-1/3">
-                        <div class="bg-gray-50 rounded-lg p-4 space-y-2">
-                            <div class="flex justify-between text-sm">
-                                <span class="text-gray-600">Subtotal:</span>
-                                <span class="font-medium">${currencySymbol} ${formatNumber(totals.subtotal)}</span>
+                    <div class="w-full md:w-1/2 lg:w-2/5">
+                        <div class="bg-gray-50 rounded-lg p-4 space-y-1.5 text-sm">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Subtotal ${pricesIncludeTax ? '(Sin IGV)' : ''}:</span>
+                                <span class="font-medium text-gray-800">${currencySymbol} ${formatNumber(totals.subtotal)}</span>
                             </div>
-                            <div class="flex justify-between text-sm">
+                            <div class="flex justify-between">
                                 <span class="text-gray-600">Descuentos:</span>
                                 <span class="text-red-600">- ${currencySymbol} ${formatNumber(totals.discount)}</span>
                             </div>
-                            <div class="flex justify-between text-sm">
-                                <span class="text-gray-600">IGV (${document.getElementById('tax-rate').value}%):</span>
-                                <span class="font-medium">${currencySymbol} ${formatNumber(totals.tax)}</span>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">${taxLabel}:</span>
+                                <span class="font-medium text-gray-800">${currencySymbol} ${formatNumber(totals.tax)}</span>
                             </div>
-                            <div class="border-t border-gray-300 pt-2">
+                            <div class="border-t border-gray-300 pt-1.5 mt-1.5">
                                 <div class="flex justify-between text-lg font-bold">
                                     <span class="text-gray-800">Total:</span>
                                     <span class="text-blue-600">${currencySymbol} ${formatNumber(totals.total)}</span>
@@ -1235,21 +1369,34 @@
 
                 ${notes ? `
                     <div class="mb-8 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500">
-                        <h3 class="text-sm font-semibold text-blue-800 mb-2">Observaciones:</h3>
-                        <p class="text-sm text-blue-700 whitespace-pre-line">${notes}</p>
+                        <h3 class="text-sm font-semibold text-blue-800 mb-1">Observaciones:</h3>
+                        <p class="text-xs text-blue-700 whitespace-pre-line">${notes}</p>
                     </div>
                 ` : ''}
 
                 <div class="mt-8 pt-4 border-t border-gray-200 text-center">
-                    <p class="text-xs text-gray-500">Esta factura es un documento legal emitido electrónicamente.</p>
+                    <p class="text-xs text-gray-500">Esta es una representación impresa de una factura electrónica.</p>
                     <p class="text-xs text-gray-500 mt-1">Gracias por su preferencia.</p>
                 </div>
             `;
         }
 
+
         // PDF Generation using html2canvas to maintain exact visual appearance
         async function generatePDF() {
-            if (!validateProducts()) return;
+             if (!validateCurrentStep() && currentStep !==7 ) { // Ensure current step is valid unless we are already on preview
+                alert("Por favor complete los campos requeridos antes de generar el PDF.");
+                return;
+            }
+             if (currentStep === 5 && !validateProducts()) { // Specific check for products if on step 5
+                alert("Verifique los productos antes de generar el PDF.");
+                return;
+            }
+            if (products.length === 0) {
+                 if (!confirm("No hay productos agregados. ¿Desea generar el PDF de todas formas?")) {
+                    return;
+                 }
+            }
             
             // Show loading state
             const btn = document.getElementById('generate-pdf');
@@ -1258,100 +1405,121 @@
             btn.disabled = true;
             
             try {
-                // Get the invoice preview element
-                const invoiceElement = document.querySelector('.invoice-preview');
+                // Get the invoice preview element (ensure it's the one within the preview step)
+                const invoiceElement = document.querySelector('#step-7 .invoice-preview');
                 
-                if (!invoiceElement) {
-                    throw new Error('No se encontró la previsualización de la factura');
+                if (!invoiceElement || invoiceElement.innerHTML.trim() === '') {
+                    // If preview isn't populated, generate it now
+                    updatePreview(); 
+                    // Need a slight delay for DOM to update if updatePreview was just called
+                    await new Promise(resolve => setTimeout(resolve, 100)); 
                 }
+
+                 const finalInvoiceElement = document.querySelector('#step-7 .invoice-preview');
+                 if (!finalInvoiceElement) {
+                     throw new Error('No se encontró la previsualización de la factura para el PDF.');
+                 }
                 
                 // Configure html2canvas options for better quality
-                const canvas = await html2canvas(invoiceElement, {
-                    scale: 2, // Higher resolution
+                const canvas = await html2canvas(finalInvoiceElement, { // Use finalInvoiceElement
+                    scale: 2.5, // Increased scale for better quality
                     useCORS: true,
-                    allowTaint: true,
+                    allowTaint: true, // Be cautious with this if you have cross-origin images not correctly configured for CORS
                     backgroundColor: '#ffffff',
-                    width: invoiceElement.scrollWidth,
-                    height: invoiceElement.scrollHeight,
-                    onclone: function(clonedDoc) {
-                        // Ensure all images are loaded in the cloned document
+                    scrollX: 0, // Ensure we capture from the very start
+                    scrollY: 0,
+                    windowWidth: finalInvoiceElement.scrollWidth,
+                    windowHeight: finalInvoiceElement.scrollHeight,
+                    width: finalInvoiceElement.scrollWidth,  // Explicitly set width and height from the element
+                    height: finalInvoiceElement.scrollHeight,
+                     onclone: function(clonedDoc) {
                         const clonedElement = clonedDoc.querySelector('.invoice-preview');
                         if (clonedElement) {
-                            clonedElement.style.transform = 'none';
-                            clonedElement.style.boxShadow = 'none';
-                            clonedElement.style.border = 'none';
+                            clonedElement.style.transform = 'none'; // Reset any transforms
+                            clonedElement.style.boxShadow = 'none'; // Remove shadows for cleaner PDF
+                            clonedElement.style.border = 'none';    // Remove borders for cleaner PDF
+                            clonedElement.style.margin = '0';      // Reset margins
+                            clonedElement.style.padding = '15px'; // Standard padding for content spacing
                         }
                     }
                 });
                 
-                // Create PDF
-                const imgData = canvas.toDataURL('image/png');
                 
-                // Calculate dimensions
-                const pdfWidth = 210; // A4 width in mm
-                const pdfHeight = 297; // A4 height in mm
-                const imgWidth = pdfWidth - 20; // Leave 10mm margin on each side
-                const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                const imgData = canvas.toDataURL('image/png', 1.0); // Use full quality PNG
                 
-                // Create PDF document
                 const pdf = new jsPDF({
-                    orientation: imgHeight > pdfHeight - 20 ? 'portrait' : 'portrait',
+                    orientation: 'p', // portrait
                     unit: 'mm',
                     format: 'a4'
                 });
-                
-                // Add the image to PDF
-                let yPosition = 10; // Start 10mm from top
-                
-                if (imgHeight > pdfHeight - 20) {
-                    // If image is too tall, we need to split it across multiple pages
-                    const pageHeight = pdfHeight - 20; // Available height per page
-                    const totalPages = Math.ceil(imgHeight / pageHeight);
-                    
-                    for (let i = 0; i < totalPages; i++) {
-                        if (i > 0) {
-                            pdf.addPage();
-                        }
-                        
-                        const sourceY = i * pageHeight * (canvas.height / imgHeight);
-                        const sourceHeight = Math.min(pageHeight * (canvas.height / imgHeight), canvas.height - sourceY);
-                        
-                        // Create a temporary canvas for this page section
-                        const tempCanvas = document.createElement('canvas');
-                        tempCanvas.width = canvas.width;
-                        tempCanvas.height = sourceHeight;
-                        const tempCtx = tempCanvas.getContext('2d');
-                        
-                        tempCtx.drawImage(canvas, 0, sourceY, canvas.width, sourceHeight, 0, 0, canvas.width, sourceHeight);
-                        
-                        const tempImgData = tempCanvas.toDataURL('image/png');
-                        const tempImgHeight = (sourceHeight * imgWidth) / canvas.width;
-                        
-                        pdf.addImage(tempImgData, 'PNG', 10, yPosition, imgWidth, tempImgHeight);
-                    }
-                } else {
-                    // Image fits in one page
-                    pdf.addImage(imgData, 'PNG', 10, yPosition, imgWidth, imgHeight);
+
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pdfHeight = pdf.internal.pageSize.getHeight();
+                const margin = 10; // 10mm margin
+
+                const imgProps= pdf.getImageProperties(imgData);
+                const BORDER_MARGIN = 10; // Margen para el contenido de la imagen en el PDF
+                const contentWidth = pdf.internal.pageSize.getWidth() - 2 * BORDER_MARGIN;
+                const contentHeight = pdf.internal.pageSize.getHeight() - 2 * BORDER_MARGIN;
+
+                const aspectRatio = imgProps.width / imgProps.height;
+                let imgWidthPDF = contentWidth;
+                let imgHeightPDF = imgWidthPDF / aspectRatio;
+
+                if (imgHeightPDF > contentHeight) {
+                    imgHeightPDF = contentHeight;
+                    imgWidthPDF = imgHeightPDF * aspectRatio;
                 }
                 
-                // Set PDF metadata
-                const invoiceNumber = document.getElementById('invoice-number').value;
-                const companyName = document.getElementById('company-name').value;
+                const xPosition = (pdfWidth - imgWidthPDF) / 2; // Center image
+                const yPosition = BORDER_MARGIN;
+
+                // Check if image height exceeds page height
+                if (imgHeightPDF > contentHeight) {
+                     // Multi-page PDF logic
+                    const pageCanvas = document.createElement('canvas');
+                    const pageCtx = pageCanvas.getContext('2d');
+                    const pageHeightMM = contentHeight; // Max height for content on one page
+                    const pageHeightPx = pageHeightMM * (canvas.height / imgHeightPDF); // Convert mm to px based on overall scale
+
+                    let currentPositionPx = 0;
+                    while(currentPositionPx < canvas.height) {
+                        pageCanvas.width = canvas.width;
+                        pageCanvas.height = Math.min(pageHeightPx, canvas.height - currentPositionPx);
+
+                        pageCtx.drawImage(canvas, 0, currentPositionPx, canvas.width, pageCanvas.height, 0, 0, canvas.width, pageCanvas.height);
+                        
+                        const pageImgData = pageCanvas.toDataURL('image/png', 1.0);
+                        const pageImgProps = pdf.getImageProperties(pageImgData);
+                        const pageImgWidthPDF = contentWidth;
+                        const pageImgHeightPDF = (pageImgProps.height * pageImgWidthPDF) / pageImgProps.width;
+
+                        if (currentPositionPx > 0) {
+                            pdf.addPage();
+                        }
+                        pdf.addImage(pageImgData, 'PNG', xPosition, yPosition, pageImgWidthPDF, pageImgHeightPDF, undefined, 'FAST');
+                        currentPositionPx += pageHeightPx;
+                    }
+
+                } else {
+                     pdf.addImage(imgData, 'PNG', xPosition, yPosition, imgWidthPDF, imgHeightPDF, undefined, 'FAST');
+                }
+                
+                const invoiceNumber = document.getElementById('invoice-number').value || "SIN_NUMERO";
+                const companyName = document.getElementById('company-name').value || "Empresa";
                 
                 pdf.setProperties({
                     title: `Factura ${invoiceNumber}`,
-                    subject: 'Factura electrónica',
+                    subject: 'Factura electrónica generada',
                     author: companyName,
-                    keywords: 'factura, invoice, billing',
-                    creator: 'Sistema de Facturación Electrónica'
+                    creator: 'Sistema de Facturación Web Profesional'
                 });
                 
-                // Save the PDF
                 pdf.save(`Factura_${invoiceNumber}.pdf`);
                 
             } catch (error) {
-                console.error('Error generating PDF:', error);
-                alert('Error al generar el PDF. Por favor, inténtalo de nuevo.');
+                console.error('Error generando PDF:', error);
+                alert(`Error al generar el PDF: ${error.message}. Por favor, inténtalo de nuevo.`);
             } finally {
                 // Restore button
                 btn.innerHTML = originalText;
@@ -1359,18 +1527,25 @@
             }
         }
 
-        // Reset form
+
         function resetForm() {
-            if (confirm('¿Está seguro que desea crear una nueva factura? Todos los datos actuales se perderán.')) {
+            if (confirm('¿Está seguro que desea crear una nueva factura? Todos los datos actuales se perderán y se generará un nuevo número de factura.')) {
                 // Reset all form fields
-                document.querySelectorAll('input, select, textarea').forEach(field => {
-                    if (field.type === 'checkbox') {
-                        field.checked = false;
-                    } else if (field.id !== 'invoice-number') {
+                document.querySelectorAll('input:not([type=radio]):not([type=checkbox]), select, textarea').forEach(field => {
+                    if (field.id !== 'invoice-number' && field.id !== 'tax-rate' && field.id !== 'currency' && field.id !== 'invoice-date') {
                         field.value = '';
                     }
+                     if (field.id === 'tax-rate') field.value = '18';
+                     if (field.id === 'currency') field.value = 'PEN';
                 });
+                document.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = false);
+                document.getElementById('prices-include-tax').checked = false; // Explicitly uncheck
                 
+                 // Reset payment condition specific field
+                document.getElementById('payment-condition').value = 'Contado';
+                document.getElementById('payment-days-container').classList.add('hidden');
+                document.getElementById('payment-days').value = '';
+
                 // Clear logo
                 removeLogo();
                 
@@ -1380,16 +1555,26 @@
                 
                 // Reset to step 1
                 currentStep = 1;
-                updateStepDisplay();
+
+                // Reinitialize: set date, generate new invoice number, add first product row, update summary
+                initForm(); // This will also call generateInvoiceNumber(), addProductRow(), updateSummary() and updateStepDisplay() via setupFloatingLabels
                 
-                // Reinitialize
-                initForm();
+                // Manually call updateStepDisplay as initForm might not cover all visual reset for sidebar
+                updateStepDisplay(); 
+                 
+                //Ensure floating labels are correctly reset for empty fields
+                setupFloatingLabels(); 
+                
+                 // Clear preview from last step if any
+                const previewContainer = document.querySelector('#invoice-preview-container .invoice-preview');
+                if(previewContainer) previewContainer.innerHTML = '';
             }
         }
 
         // Utility functions
         function formatNumber(number) {
-            return number.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+            if (isNaN(parseFloat(number))) return '0.00';
+            return parseFloat(number).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
         }
 
         function formatCurrency(amount) {
@@ -1402,17 +1587,17 @@
             const symbols = {
                 'USD': '$', 'PEN': 'S/', 'EUR': '€', 'GBP': '£', 'JPY': '¥',
                 'CAD': 'CA$', 'AUD': 'A$', 'CHF': 'CHF', 'CNY': '¥', 'MXN': 'MX$',
-                'BRL': 'R$', 'ARS': '$', 'CLP': 'CLP$', 'COP': 'COL$'
+                'BRL': 'R$', 'ARS': '$', 'CLP': '$', 'COP': '$' // Adjusted CLP and COP symbols
             };
             return symbols[currencyCode] || currencyCode;
         }
 
         function getCurrencyName(currencyCode) {
-            const names = {
-                'USD': 'Dólares', 'PEN': 'Soles', 'EUR': 'Euros', 'GBP': 'Libras', 'JPY': 'Yenes',
-                'CAD': 'Dólares Canadienses', 'AUD': 'Dólares Australianos', 'CHF': 'Francos Suizos',
-                'CNY': 'Yuanes', 'MXN': 'Pesos Mexicanos', 'BRL': 'Reales', 'ARS': 'Pesos Argentinos',
-                'CLP': 'Pesos Chilenos', 'COP': 'Pesos Colombianos'
+            const names = { // Shortened names for better fit
+                'USD': 'Dólares USD', 'PEN': 'Soles PEN', 'EUR': 'Euros EUR', 'GBP': 'Libras GBP', 'JPY': 'Yenes JPY',
+                'CAD': 'Dólares CAD', 'AUD': 'Dólares AUD', 'CHF': 'Francos CHF',
+                'CNY': 'Yuanes CNY', 'MXN': 'Pesos MXN', 'BRL': 'Reales BRL', 'ARS': 'Pesos ARG',
+                'CLP': 'Pesos CLP', 'COP': 'Pesos COP'
             };
             return names[currencyCode] || currencyCode;
         }
