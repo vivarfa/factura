@@ -1,0 +1,1423 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Facturación Electrónica Profesional</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .card-shadow {
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+        .step-transition {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .step-active {
+            transform: translateX(0);
+            opacity: 1;
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+        .step-inactive {
+            transform: translateX(20px);
+            opacity: 0;
+            pointer-events: none;
+            display: none;
+        }
+        .progress-bar {
+            transition: width 0.5s ease;
+        }
+        .logo-preview {
+            max-height: 80px;
+            max-width: 200px;
+        }
+        .animate-slide-in {
+            animation: slideIn 0.5s ease-out;
+        }
+        @keyframes slideIn {
+            from { 
+                opacity: 0; 
+                transform: translateY(20px);
+            }
+            to { 
+                opacity: 1; 
+                transform: translateY(0);
+            }
+        }
+        .floating-label {
+            transition: all 0.2s ease;
+        }
+        .floating-label.active {
+            transform: translateY(-28px) scale(0.85);
+            color: #667eea;
+            background-color: white;
+            padding: 0 4px;
+            border-radius: 4px;
+        }
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .invoice-preview {
+            background: white;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+    </style>
+<script src="https://lib.youware.com/youware-lib.1747145198.js" id="yourware-lib"></script></head>
+<body class="gradient-bg">
+    <!-- Header -->
+    <header class="bg-white/10 backdrop-blur-lg border-b border-white/20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-6">
+                <div class="flex items-center">
+                    <div class="bg-white/20 rounded-lg p-3 mr-4">
+                        <i class="fas fa-file-invoice text-2xl text-white"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold text-white">Facturación Electrónica</h1>
+                        <p class="text-white/80 text-sm">Sistema profesional de generación de facturas</p>
+                    </div>
+                </div>
+                <div class="hidden md:flex items-center space-x-4">
+                    <div class="bg-white/20 rounded-lg px-4 py-2">
+                        <span class="text-white text-sm">Factura: <span id="header-invoice-number" class="font-mono font-bold">F001-00000001</span></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            <!-- Progress Sidebar -->
+            <div class="lg:col-span-1">
+                <div class="bg-white/10 backdrop-blur-lg rounded-2xl border border-white/20 p-6 sticky top-8">
+                    <h3 class="text-lg font-semibold text-white mb-6">Progreso</h3>
+                    
+                    <!-- Progress Bar -->
+                    <div class="mb-6">
+                        <div class="bg-white/20 rounded-full h-2 mb-2">
+                            <div id="progress-bar" class="progress-bar bg-gradient-to-r from-emerald-400 to-blue-500 h-2 rounded-full" style="width: 14.28%"></div>
+                        </div>
+                        <p class="text-white/80 text-sm"><span id="progress-text">Paso 1 de 7</span></p>
+                    </div>
+
+                    <!-- Steps List -->
+                    <div class="space-y-3">
+                        <div class="step-item active" data-step="1">
+                            <div class="flex items-center">
+                                <div class="step-circle w-8 h-8 rounded-full bg-gradient-to-r from-emerald-400 to-blue-500 flex items-center justify-center mr-3">
+                                    <i class="fas fa-image text-white text-sm"></i>
+                                </div>
+                                <span class="text-white font-medium">Imagen Corporativa</span>
+                            </div>
+                        </div>
+                        
+                        <div class="step-item" data-step="2">
+                            <div class="flex items-center">
+                                <div class="step-circle w-8 h-8 rounded-full bg-white/20 flex items-center justify-center mr-3">
+                                    <i class="fas fa-building text-white/60 text-sm"></i>
+                                </div>
+                                <span class="text-white/60">Datos de la Empresa</span>
+                            </div>
+                        </div>
+                        
+                        <div class="step-item" data-step="3">
+                            <div class="flex items-center">
+                                <div class="step-circle w-8 h-8 rounded-full bg-white/20 flex items-center justify-center mr-3">
+                                    <i class="fas fa-file-alt text-white/60 text-sm"></i>
+                                </div>
+                                <span class="text-white/60">Info. de Factura</span>
+                            </div>
+                        </div>
+                        
+                        <div class="step-item" data-step="4">
+                            <div class="flex items-center">
+                                <div class="step-circle w-8 h-8 rounded-full bg-white/20 flex items-center justify-center mr-3">
+                                    <i class="fas fa-user text-white/60 text-sm"></i>
+                                </div>
+                                <span class="text-white/60">Datos del Cliente</span>
+                            </div>
+                        </div>
+                        
+                        <div class="step-item" data-step="5">
+                            <div class="flex items-center">
+                                <div class="step-circle w-8 h-8 rounded-full bg-white/20 flex items-center justify-center mr-3">
+                                    <i class="fas fa-shopping-cart text-white/60 text-sm"></i>
+                                </div>
+                                <span class="text-white/60">Productos/Servicios</span>
+                            </div>
+                        </div>
+                        
+                        <div class="step-item" data-step="6">
+                            <div class="flex items-center">
+                                <div class="step-circle w-8 h-8 rounded-full bg-white/20 flex items-center justify-center mr-3">
+                                    <i class="fas fa-calculator text-white/60 text-sm"></i>
+                                </div>
+                                <span class="text-white/60">Moneda e Impuestos</span>
+                            </div>
+                        </div>
+                        
+                        <div class="step-item" data-step="7">
+                            <div class="flex items-center">
+                                <div class="step-circle w-8 h-8 rounded-full bg-white/20 flex items-center justify-center mr-3">
+                                    <i class="fas fa-check text-white/60 text-sm"></i>
+                                </div>
+                                <span class="text-white/60">Finalizar</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Invoice Summary -->
+                    <div class="mt-8 p-4 bg-white/10 rounded-xl border border-white/20">
+                        <h4 class="text-white font-semibold mb-3">Resumen</h4>
+                        <div class="space-y-2 text-sm">
+                            <div class="flex justify-between text-white/80">
+                                <span>Subtotal:</span>
+                                <span id="summary-subtotal">S/ 0.00</span>
+                            </div>
+                            <div class="flex justify-between text-white/80">
+                                <span>Descuentos:</span>
+                                <span id="summary-discount" class="text-red-300">- S/ 0.00</span>
+                            </div>
+                            <div class="flex justify-between text-white/80">
+                                <span>IGV (18%):</span>
+                                <span id="summary-tax">S/ 0.00</span>
+                            </div>
+                            <div class="border-t border-white/20 pt-2 mt-2">
+                                <div class="flex justify-between font-bold text-white">
+                                    <span>Total:</span>
+                                    <span id="summary-total">S/ 0.00</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="lg:col-span-3">
+                <div class="bg-white rounded-2xl card-shadow overflow-hidden min-h-[500px] flex flex-col">
+                    
+                    <!-- Step 1: Imagen Corporativa -->
+                    <div id="step-1" class="step-content step-active">
+                        <div class="bg-gradient-to-r from-blue-600 to-purple-600 p-8 text-white">
+                            <h2 class="text-3xl font-bold mb-2">Imagen Corporativa</h2>
+                            <p class="text-blue-100">Comencemos agregando el logo de tu empresa para personalizar tu factura</p>
+                        </div>
+                        
+                        <div class="p-8">
+                            <div class="max-w-2xl mx-auto">
+                                <div class="text-center mb-8">
+                                    <div id="logo-preview-container" class="w-48 h-32 mx-auto border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center bg-gray-50 hover:bg-gray-100 transition-colors">
+                                        <i class="fas fa-image text-gray-400 text-3xl mb-2"></i>
+                                        <p class="text-gray-500 text-sm">No hay logo cargado</p>
+                                    </div>
+                                </div>
+                                
+                                <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                                    <label for="logo-upload" class="cursor-pointer bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-3 rounded-xl font-medium transition-all duration-200 transform hover:scale-105 flex items-center">
+                                        <i class="fas fa-upload mr-2"></i>Subir Logo
+                                    </label>
+                                    <input type="file" id="logo-upload" accept="image/png, image/jpeg, image/svg+xml" class="hidden">
+                                    <button id="remove-logo" class="hidden px-6 py-3 border border-red-300 text-red-600 rounded-xl hover:bg-red-50 transition-colors">
+                                        <i class="fas fa-trash mr-2"></i>Eliminar
+                                    </button>
+                                </div>
+                                
+                                <p class="text-center text-gray-500 text-sm mt-4">
+                                    Formatos aceptados: PNG, JPG, SVG (Máx. 2MB)
+                                </p>
+                                
+                                <div class="mt-12 text-center">
+                                    <button class="next-btn bg-gradient-to-r from-emerald-500 to-blue-600 hover:from-emerald-600 hover:to-blue-700 text-white px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-200 transform hover:scale-105">
+                                        Continuar <i class="fas fa-arrow-right ml-2"></i>
+                                    </button>
+                                    <p class="text-gray-500 text-sm mt-3">Puedes omitir este paso si no tienes logo</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Datos de la Empresa -->
+                    <div id="step-2" class="step-content step-inactive">
+                        <div class="bg-gradient-to-r from-green-600 to-blue-600 p-8 text-white">
+                            <h2 class="text-3xl font-bold mb-2">Datos de la Empresa</h2>
+                            <p class="text-green-100">Información del emisor de la factura</p>
+                        </div>
+                        
+                        <div class="p-6">
+                            <div class="max-w-3xl mx-auto">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                                    <div class="relative">
+                                        <input type="text" id="company-name" class="peer w-full px-4 py-4 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none transition-colors" placeholder=" " required>
+                                        <label class="floating-label absolute left-4 top-4 text-gray-500 pointer-events-none peer-focus:active peer-[:not(:placeholder-shown)]:active">
+                                            Nombre legal de la empresa <span class="text-red-500">*</span>
+                                        </label>
+                                    </div>
+                                    
+                                    <div class="relative">
+                                        <input type="text" id="company-tax-id" class="peer w-full px-4 py-4 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none transition-colors" placeholder=" " required>
+                                        <label class="floating-label absolute left-4 top-4 text-gray-500 pointer-events-none peer-focus:active peer-[:not(:placeholder-shown)]:active">
+                                            RUC/NIF <span class="text-red-500">*</span>
+                                        </label>
+                                    </div>
+                                    
+                                    <div class="relative">
+                                        <input type="text" id="company-address" class="peer w-full px-4 py-4 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none transition-colors" placeholder=" ">
+                                        <label class="floating-label absolute left-4 top-4 text-gray-500 pointer-events-none peer-focus:active peer-[:not(:placeholder-shown)]:active">
+                                            Dirección fiscal
+                                        </label>
+                                    </div>
+                                    
+                                    <div class="relative">
+                                        <input type="tel" id="company-phone" class="peer w-full px-4 py-4 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none transition-colors" placeholder=" ">
+                                        <label class="floating-label absolute left-4 top-4 text-gray-500 pointer-events-none peer-focus:active peer-[:not(:placeholder-shown)]:active">
+                                            Teléfono
+                                        </label>
+                                    </div>
+                                    
+                                    <div class="relative md:col-span-2">
+                                        <input type="email" id="company-email" class="peer w-full px-4 py-4 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none transition-colors" placeholder=" ">
+                                        <label class="floating-label absolute left-4 top-4 text-gray-500 pointer-events-none peer-focus:active peer-[:not(:placeholder-shown)]:active">
+                                            Email corporativo
+                                        </label>
+                                    </div>
+                                </div>
+                                
+                                <div class="flex justify-between mt-12">
+                                    <button class="prev-btn px-6 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors">
+                                        <i class="fas fa-arrow-left mr-2"></i>Anterior
+                                    </button>
+                                    <button class="next-btn bg-gradient-to-r from-emerald-500 to-blue-600 hover:from-emerald-600 hover:to-blue-700 text-white px-8 py-4 rounded-xl font-semibold transition-all duration-200 transform hover:scale-105">
+                                        Continuar <i class="fas fa-arrow-right ml-2"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Información de Factura -->
+                    <div id="step-3" class="step-content step-inactive">
+                        <div class="bg-gradient-to-r from-purple-600 to-pink-600 p-8 text-white">
+                            <h2 class="text-3xl font-bold mb-2">Información de Factura</h2>
+                            <p class="text-purple-100">Detalles específicos de esta factura</p>
+                        </div>
+                        
+                        <div class="p-6">
+                            <div class="max-w-3xl mx-auto">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                                    <div class="relative">
+                                        <input type="text" id="invoice-number" class="peer w-full px-4 py-4 border-2 border-gray-200 rounded-xl bg-gray-50 font-mono text-lg" readonly>
+                                        <label class="floating-label absolute left-4 top-4 text-gray-500 pointer-events-none active">
+                                            Número de factura
+                                        </label>
+                                    </div>
+                                    
+                                    <div class="relative">
+                                        <input type="date" id="invoice-date" class="peer w-full px-4 py-4 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none transition-colors">
+                                        <label class="floating-label absolute left-4 top-4 text-gray-500 pointer-events-none active">
+                                            Fecha de emisión
+                                        </label>
+                                    </div>
+                                    
+                                    <div class="relative">
+                                        <select id="payment-method" class="peer w-full px-4 py-4 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none transition-colors">
+                                            <option value="Efectivo">Efectivo</option>
+                                            <option value="Tarjeta de crédito/débito">Tarjeta de crédito/débito</option>
+                                            <option value="Transferencia bancaria">Transferencia bancaria</option>
+                                            <option value="Yape/Plin">Yape/Plin</option>
+                                            <option value="PayPal">PayPal</option>
+                                            <option value="Mercado Pago">Mercado Pago</option>
+                                            <option value="Otro">Otro</option>
+                                        </select>
+                                        <label class="floating-label absolute left-4 top-4 text-gray-500 pointer-events-none active">
+                                            Método de pago
+                                        </label>
+                                    </div>
+                                    
+                                    <div class="relative">
+                                        <select id="payment-condition" class="peer w-full px-4 py-4 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none transition-colors">
+                                            <option value="Contado">Contado</option>
+                                            <option value="Crédito">Crédito</option>
+                                        </select>
+                                        <label class="floating-label absolute left-4 top-4 text-gray-500 pointer-events-none active">
+                                            Condición de pago
+                                        </label>
+                                    </div>
+                                    
+                                    <div id="payment-days-container" class="relative hidden">
+                                        <input type="number" id="payment-days" class="peer w-full px-4 py-4 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none transition-colors" min="1" placeholder=" ">
+                                        <label class="floating-label absolute left-4 top-4 text-gray-500 pointer-events-none peer-focus:active peer-[:not(:placeholder-shown)]:active">
+                                            Días de crédito
+                                        </label>
+                                    </div>
+                                </div>
+                                
+                                <div class="flex justify-between mt-12">
+                                    <button class="prev-btn px-6 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors">
+                                        <i class="fas fa-arrow-left mr-2"></i>Anterior
+                                    </button>
+                                    <button class="next-btn bg-gradient-to-r from-emerald-500 to-blue-600 hover:from-emerald-600 hover:to-blue-700 text-white px-8 py-4 rounded-xl font-semibold transition-all duration-200 transform hover:scale-105">
+                                        Continuar <i class="fas fa-arrow-right ml-2"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 4: Datos del Cliente -->
+                    <div id="step-4" class="step-content step-inactive">
+                        <div class="bg-gradient-to-r from-orange-600 to-red-600 p-8 text-white">
+                            <h2 class="text-3xl font-bold mb-2">Datos del Cliente</h2>
+                            <p class="text-orange-100">Información del receptor de la factura</p>
+                        </div>
+                        
+                        <div class="p-6">
+                            <div class="max-w-3xl mx-auto">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                                    <div class="relative">
+                                        <input type="text" id="client-name" class="peer w-full px-4 py-4 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none transition-colors" placeholder=" " required>
+                                        <label class="floating-label absolute left-4 top-4 text-gray-500 pointer-events-none peer-focus:active peer-[:not(:placeholder-shown)]:active">
+                                            Nombre/Razón social <span class="text-red-500">*</span>
+                                        </label>
+                                    </div>
+                                    
+                                    <div class="relative">
+                                        <input type="text" id="client-tax-id" class="peer w-full px-4 py-4 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none transition-colors" placeholder=" ">
+                                        <label class="floating-label absolute left-4 top-4 text-gray-500 pointer-events-none peer-focus:active peer-[:not(:placeholder-shown)]:active">
+                                            RUC/DNI
+                                        </label>
+                                    </div>
+                                    
+                                    <div class="relative">
+                                        <input type="text" id="client-address" class="peer w-full px-4 py-4 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none transition-colors" placeholder=" ">
+                                        <label class="floating-label absolute left-4 top-4 text-gray-500 pointer-events-none peer-focus:active peer-[:not(:placeholder-shown)]:active">
+                                            Dirección
+                                        </label>
+                                    </div>
+                                    
+                                    <div class="relative">
+                                        <input type="text" id="client-contact" class="peer w-full px-4 py-4 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none transition-colors" placeholder=" ">
+                                        <label class="floating-label absolute left-4 top-4 text-gray-500 pointer-events-none peer-focus:active peer-[:not(:placeholder-shown)]:active">
+                                            Teléfono/Email
+                                        </label>
+                                    </div>
+                                </div>
+                                
+                                <div class="flex justify-between mt-12">
+                                    <button class="prev-btn px-6 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors">
+                                        <i class="fas fa-arrow-left mr-2"></i>Anterior
+                                    </button>
+                                    <button class="next-btn bg-gradient-to-r from-emerald-500 to-blue-600 hover:from-emerald-600 hover:to-blue-700 text-white px-8 py-4 rounded-xl font-semibold transition-all duration-200 transform hover:scale-105">
+                                        Continuar <i class="fas fa-arrow-right ml-2"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 5: Productos/Servicios -->
+                    <div id="step-5" class="step-content step-inactive">
+                        <div class="bg-gradient-to-r from-teal-600 to-cyan-600 p-8 text-white">
+                            <h2 class="text-3xl font-bold mb-2">Productos y Servicios</h2>
+                            <p class="text-teal-100">Agrega los artículos o servicios de tu factura</p>
+                        </div>
+                        
+                        <div class="p-6">
+                            <div class="max-w-5xl mx-auto">
+                                <!-- Products Table -->
+                                <div class="bg-gray-50 rounded-xl p-6 mb-6 mt-4">
+                                    <div class="overflow-x-auto">
+                                        <table class="min-w-full">
+                                            <thead>
+                                                <tr class="border-b border-gray-200">
+                                                    <th class="text-left py-3 px-2 font-semibold text-gray-700">Descripción</th>
+                                                    <th class="text-left py-3 px-2 font-semibold text-gray-700">Unidad</th>
+                                                    <th class="text-left py-3 px-2 font-semibold text-gray-700">Cantidad</th>
+                                                    <th class="text-left py-3 px-2 font-semibold text-gray-700">Precio</th>
+                                                    <th class="text-left py-3 px-2 font-semibold text-gray-700">Descuento</th>
+                                                    <th class="text-left py-3 px-2 font-semibold text-gray-700">Subtotal</th>
+                                                    <th class="text-left py-3 px-2 font-semibold text-gray-700"></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="products-table-body">
+                                                <!-- Products will be added here -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                
+                                <div class="text-center mb-8">
+                                    <button id="add-product" class="bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white px-6 py-3 rounded-xl font-medium transition-all duration-200 transform hover:scale-105">
+                                        <i class="fas fa-plus mr-2"></i>Agregar Producto/Servicio
+                                    </button>
+                                </div>
+                                
+                                <div class="flex justify-between">
+                                    <button class="prev-btn px-6 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors">
+                                        <i class="fas fa-arrow-left mr-2"></i>Anterior
+                                    </button>
+                                    <button class="next-btn bg-gradient-to-r from-emerald-500 to-blue-600 hover:from-emerald-600 hover:to-blue-700 text-white px-8 py-4 rounded-xl font-semibold transition-all duration-200 transform hover:scale-105">
+                                        Continuar <i class="fas fa-arrow-right ml-2"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 6: Moneda e Impuestos -->
+                    <div id="step-6" class="step-content step-inactive">
+                        <div class="bg-gradient-to-r from-indigo-600 to-purple-600 p-8 text-white">
+                            <h2 class="text-3xl font-bold mb-2">Moneda e Impuestos</h2>
+                            <p class="text-indigo-100">Configuración de moneda y cálculos fiscales</p>
+                        </div>
+                        
+                        <div class="p-6">
+                            <div class="max-w-3xl mx-auto">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                                    <div class="relative">
+                                        <select id="currency" class="peer w-full px-4 py-4 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none transition-colors">
+                                            <option value="USD">USD - Dólar estadounidense</option>
+                                            <option value="PEN" selected>PEN - Sol peruano</option>
+                                            <option value="EUR">EUR - Euro</option>
+                                            <option value="GBP">GBP - Libra esterlina</option>
+                                            <option value="JPY">JPY - Yen japonés</option>
+                                            <option value="CAD">CAD - Dólar canadiense</option>
+                                            <option value="AUD">AUD - Dólar australiano</option>
+                                            <option value="CHF">CHF - Franco suizo</option>
+                                            <option value="CNY">CNY - Yuan chino</option>
+                                            <option value="MXN">MXN - Peso mexicano</option>
+                                            <option value="BRL">BRL - Real brasileño</option>
+                                            <option value="ARS">ARS - Peso argentino</option>
+                                            <option value="CLP">CLP - Peso chileno</option>
+                                            <option value="COP">COP - Peso colombiano</option>
+                                        </select>
+                                        <label class="floating-label absolute left-4 top-4 text-gray-500 pointer-events-none active">
+                                            Moneda
+                                        </label>
+                                    </div>
+                                    
+                                    <div class="relative">
+                                        <input type="number" id="tax-rate" class="peer w-full px-4 py-4 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none transition-colors" value="18" min="0" max="100">
+                                        <label class="floating-label absolute left-4 top-4 text-gray-500 pointer-events-none active">
+                                            IGV (%)
+                                        </label>
+                                    </div>
+                                </div>
+                                
+                                <div class="mt-6">
+                                    <div class="flex items-center p-4 bg-blue-50 rounded-xl">
+                                        <input type="checkbox" id="prices-include-tax" class="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded mr-3">
+                                        <label for="prices-include-tax" class="text-gray-700 font-medium">Los precios incluyen IGV</label>
+                                    </div>
+                                </div>
+                                
+                                <!-- Notes Section -->
+                                <div class="mt-8">
+                                    <label class="block text-gray-700 font-semibold mb-3">Notas y Condiciones (Opcional)</label>
+                                    <textarea id="notes" class="w-full px-4 py-4 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none transition-colors resize-none" rows="4" placeholder="Observaciones, términos y condiciones, políticas, etc."></textarea>
+                                </div>
+                                
+                                <div class="flex justify-between mt-12">
+                                    <button class="prev-btn px-6 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors">
+                                        <i class="fas fa-arrow-left mr-2"></i>Anterior
+                                    </button>
+                                    <button class="next-btn bg-gradient-to-r from-emerald-500 to-blue-600 hover:from-emerald-600 hover:to-blue-700 text-white px-8 py-4 rounded-xl font-semibold transition-all duration-200 transform hover:scale-105">
+                                        Ver Previsualización <i class="fas fa-arrow-right ml-2"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 7: Finalizar -->
+                    <div id="step-7" class="step-content step-inactive">
+                        <div class="bg-gradient-to-r from-emerald-600 to-teal-600 p-8 text-white">
+                            <h2 class="text-3xl font-bold mb-2">¡Factura Lista!</h2>
+                            <p class="text-emerald-100">Revisa tu factura y descárgala cuando estés conforme</p>
+                        </div>
+                        
+                        <div class="p-6">
+                            <!-- Invoice Preview -->
+                            <div id="invoice-preview-container" class="max-w-4xl mx-auto">
+                                <div class="invoice-preview bg-white border border-gray-200 rounded-xl p-8 mb-8 mt-4">
+                                    <!-- Invoice content will be generated here -->
+                                </div>
+                                
+                                <!-- Action Buttons -->
+                                <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                                    <button class="prev-btn px-6 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors">
+                                        <i class="fas fa-arrow-left mr-2"></i>Editar Factura
+                                    </button>
+                                    <button id="generate-pdf" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-200 transform hover:scale-105">
+                                        <i class="fas fa-download mr-2"></i>Descargar PDF
+                                    </button>
+                                    <button id="reset-form" class="px-6 py-3 border border-red-300 text-red-600 rounded-xl hover:bg-red-50 transition-colors">
+                                        <i class="fas fa-redo mr-2"></i>Nueva Factura
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize jsPDF
+        const { jsPDF } = window.jspdf;
+
+        // Global variables
+        let currentStep = 1;
+        let products = [];
+        let logoDataUrl = null;
+        let nextInvoiceNumber = 1;
+
+        // DOM Elements
+        const stepContents = document.querySelectorAll('.step-content');
+        const stepItems = document.querySelectorAll('.step-item');
+        const progressBar = document.getElementById('progress-bar');
+        const progressText = document.getElementById('progress-text');
+        const headerInvoiceNumber = document.getElementById('header-invoice-number');
+
+        // Initialize form
+        function initForm() {
+            // Set current date
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('invoice-date').value = today;
+            
+            // Generate invoice number
+            generateInvoiceNumber();
+            
+            // Add first product row
+            addProductRow();
+            
+            // Update summary
+            updateSummary();
+            
+            // Setup floating labels
+            setupFloatingLabels();
+            
+            // Setup event listeners
+            setupEventListeners();
+        }
+
+        // Generate invoice number
+        function generateInvoiceNumber() {
+            const paddedNumber = String(nextInvoiceNumber).padStart(8, '0');
+            const invoiceNumber = `F001-${paddedNumber}`;
+            document.getElementById('invoice-number').value = invoiceNumber;
+            headerInvoiceNumber.textContent = invoiceNumber;
+            nextInvoiceNumber++;
+        }
+
+        // Setup floating labels
+        function setupFloatingLabels() {
+            const inputs = document.querySelectorAll('input, select, textarea');
+            inputs.forEach(input => {
+                const label = input.parentNode.querySelector('.floating-label');
+                if (label) {
+                    input.addEventListener('focus', () => {
+                        label.classList.add('active');
+                    });
+                    
+                    input.addEventListener('blur', () => {
+                        if (!input.value) {
+                            label.classList.remove('active');
+                        }
+                    });
+                    
+                    // Check if input has value on load
+                    if (input.value) {
+                        label.classList.add('active');
+                    }
+                }
+            });
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Next/Previous buttons
+            document.addEventListener('click', (e) => {
+                if (e.target.classList.contains('next-btn') || e.target.closest('.next-btn')) {
+                    nextStep();
+                }
+                if (e.target.classList.contains('prev-btn') || e.target.closest('.prev-btn')) {
+                    prevStep();
+                }
+            });
+
+            // Logo upload
+            document.getElementById('logo-upload').addEventListener('change', handleLogoUpload);
+            document.getElementById('remove-logo').addEventListener('click', removeLogo);
+
+            // Payment condition change
+            document.getElementById('payment-condition').addEventListener('change', function() {
+                const paymentDaysContainer = document.getElementById('payment-days-container');
+                if (this.value === 'Crédito') {
+                    paymentDaysContainer.classList.remove('hidden');
+                } else {
+                    paymentDaysContainer.classList.add('hidden');
+                }
+            });
+
+            // Add product button
+            document.getElementById('add-product').addEventListener('click', addProductRow);
+
+            // Form inputs for live update
+            const formInputs = document.querySelectorAll('input, select, textarea');
+            formInputs.forEach(input => {
+                input.addEventListener('input', updateSummary);
+                input.addEventListener('change', updateSummary);
+            });
+
+            // Generate PDF
+            document.getElementById('generate-pdf').addEventListener('click', generatePDF);
+
+            // Reset form
+            document.getElementById('reset-form').addEventListener('click', resetForm);
+        }
+
+        // Navigation functions
+        function nextStep() {
+            if (currentStep < 7) {
+                if (validateCurrentStep()) {
+                    currentStep++;
+                    updateStepDisplay();
+                    if (currentStep === 7) {
+                        updatePreview();
+                    }
+                }
+            }
+        }
+
+        function prevStep() {
+            if (currentStep > 1) {
+                currentStep--;
+                updateStepDisplay();
+            }
+        }
+
+        function updateStepDisplay() {
+            // Update step content
+            stepContents.forEach((content, index) => {
+                if (index + 1 === currentStep) {
+                    content.classList.remove('step-inactive');
+                    content.classList.add('step-active');
+                } else {
+                    content.classList.remove('step-active');
+                    content.classList.add('step-inactive');
+                }
+            });
+
+            // Update progress sidebar
+            stepItems.forEach((item, index) => {
+                const circle = item.querySelector('.step-circle');
+                const text = item.querySelector('span');
+                
+                if (index + 1 === currentStep) {
+                    item.classList.add('active');
+                    circle.classList.remove('bg-white/20');
+                    circle.classList.add('bg-gradient-to-r', 'from-emerald-400', 'to-blue-500');
+                    text.classList.remove('text-white/60');
+                    text.classList.add('text-white', 'font-medium');
+                } else if (index + 1 < currentStep) {
+                    circle.classList.remove('bg-white/20');
+                    circle.classList.add('bg-emerald-500');
+                    circle.innerHTML = '<i class="fas fa-check text-white text-sm"></i>';
+                    text.classList.remove('text-white/60');
+                    text.classList.add('text-white');
+                } else {
+                    item.classList.remove('active');
+                    circle.classList.add('bg-white/20');
+                    circle.classList.remove('bg-gradient-to-r', 'from-emerald-400', 'to-blue-500', 'bg-emerald-500');
+                    text.classList.add('text-white/60');
+                    text.classList.remove('text-white', 'font-medium');
+                }
+            });
+
+            // Update progress bar
+            const progressPercent = (currentStep / 7) * 100;
+            progressBar.style.width = `${progressPercent}%`;
+            progressText.textContent = `Paso ${currentStep} de 7`;
+
+            // Scroll to the content section
+            setTimeout(() => {
+                const stepContent = document.querySelector('.step-active');
+                if (stepContent) {
+                    const headerHeight = document.querySelector('header').offsetHeight;
+                    const stepHeader = stepContent.querySelector('div[class*="bg-gradient-to-r"]');
+                    if (stepHeader) {
+                        const targetPosition = stepHeader.offsetTop + document.querySelector('.lg\\:col-span-3').offsetTop - headerHeight - 20;
+                        window.scrollTo({ 
+                            top: targetPosition, 
+                            behavior: 'smooth' 
+                        });
+                    }
+                }
+            }, 50);
+        }
+
+        function validateCurrentStep() {
+            switch (currentStep) {
+                case 2:
+                    return validateCompanyData();
+                case 4:
+                    return validateClientData();
+                case 5:
+                    return validateProducts();
+                default:
+                    return true;
+            }
+        }
+
+        function validateCompanyData() {
+            const companyName = document.getElementById('company-name').value.trim();
+            const companyTaxId = document.getElementById('company-tax-id').value.trim();
+            
+            if (!companyName) {
+                alert('El nombre de la empresa es requerido');
+                document.getElementById('company-name').focus();
+                return false;
+            }
+            
+            if (!companyTaxId) {
+                alert('El RUC/NIF de la empresa es requerido');
+                document.getElementById('company-tax-id').focus();
+                return false;
+            }
+            
+            return true;
+        }
+
+        function validateClientData() {
+            const clientName = document.getElementById('client-name').value.trim();
+            
+            if (!clientName) {
+                alert('El nombre del cliente es requerido');
+                document.getElementById('client-name').focus();
+                return false;
+            }
+            
+            return true;
+        }
+
+        function validateProducts() {
+            if (products.length === 0) {
+                alert('Debe agregar al menos un producto o servicio');
+                return false;
+            }
+            
+            for (const product of products) {
+                if (!product.description.trim()) {
+                    alert('Todos los productos deben tener una descripción');
+                    return false;
+                }
+                
+                if (product.quantity <= 0) {
+                    alert('Las cantidades deben ser mayores a cero');
+                    return false;
+                }
+                
+                if (product.price < 0) {
+                    alert('Los precios no pueden ser negativos');
+                    return false;
+                }
+            }
+            
+            return true;
+        }
+
+        // Logo handling
+        function handleLogoUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            // Validate file type
+            const validTypes = ['image/png', 'image/jpeg', 'image/svg+xml'];
+            if (!validTypes.includes(file.type)) {
+                alert('Por favor, suba una imagen en formato PNG, JPG o SVG');
+                return;
+            }
+            
+            // Validate file size (max 2MB)
+            if (file.size > 2 * 1024 * 1024) {
+                alert('El tamaño máximo permitido es 2MB');
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                logoDataUrl = e.target.result;
+                
+                // Display preview
+                const logoPreviewContainer = document.getElementById('logo-preview-container');
+                logoPreviewContainer.innerHTML = '';
+                const img = document.createElement('img');
+                img.src = logoDataUrl;
+                img.className = 'logo-preview mx-auto rounded-lg';
+                img.alt = 'Logo de la empresa';
+                logoPreviewContainer.appendChild(img);
+                
+                // Show remove button
+                document.getElementById('remove-logo').classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function removeLogo() {
+            logoDataUrl = null;
+            const logoPreviewContainer = document.getElementById('logo-preview-container');
+            logoPreviewContainer.innerHTML = `
+                <i class="fas fa-image text-gray-400 text-3xl mb-2"></i>
+                <p class="text-gray-500 text-sm">No hay logo cargado</p>
+            `;
+            document.getElementById('remove-logo').classList.add('hidden');
+            document.getElementById('logo-upload').value = '';
+        }
+
+        // Product management
+        function addProductRow(product = {}) {
+            const rowId = Date.now();
+            const newProduct = {
+                id: rowId,
+                description: product.description || '',
+                unit: product.unit || 'Unidad',
+                quantity: product.quantity || 1,
+                price: product.price || 0,
+                discountType: product.discountType || 'percentage',
+                discountValue: product.discountValue || 0
+            };
+            
+            products.push(newProduct);
+            
+            const tbody = document.getElementById('products-table-body');
+            const row = document.createElement('tr');
+            row.id = `product-${rowId}`;
+            row.className = 'animate-slide-in border-b border-gray-200';
+            row.innerHTML = `
+                <td class="py-3 px-2">
+                    <textarea class="product-description w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" rows="2" placeholder="Descripción del producto/servicio" required>${newProduct.description}</textarea>
+                </td>
+                <td class="py-3 px-2">
+                    <select class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="Unidad" ${newProduct.unit === 'Unidad' ? 'selected' : ''}>Unidad</option>
+                        <option value="Kilo" ${newProduct.unit === 'Kilo' ? 'selected' : ''}>Kilo</option>
+                        <option value="Hora" ${newProduct.unit === 'Hora' ? 'selected' : ''}>Hora</option>
+                        <option value="Día" ${newProduct.unit === 'Día' ? 'selected' : ''}>Día</option>
+                        <option value="Servicio" ${newProduct.unit === 'Servicio' ? 'selected' : ''}>Servicio</option>
+                        <option value="Otro" ${newProduct.unit === 'Otro' ? 'selected' : ''}>Otro</option>
+                    </select>
+                </td>
+                <td class="py-3 px-2">
+                    <input type="number" min="1" step="1" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" value="${newProduct.quantity}">
+                </td>
+                <td class="py-3 px-2">
+                    <input type="number" min="0" step="0.01" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" value="${newProduct.price}">
+                </td>
+                <td class="py-3 px-2">
+                    <div class="flex gap-1">
+                        <select class="w-16 px-1 py-2 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs">
+                            <option value="percentage" ${newProduct.discountType === 'percentage' ? 'selected' : ''}>%</option>
+                            <option value="fixed" ${newProduct.discountType === 'fixed' ? 'selected' : ''}>Fijo</option>
+                        </select>
+                        <input type="number" min="0" step="0.01" class="w-full px-2 py-2 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm" value="${newProduct.discountValue}">
+                    </div>
+                </td>
+                <td class="py-3 px-2 font-medium text-right">
+                    <span class="product-subtotal text-green-600">${formatCurrency(calculateSubtotal(newProduct))}</span>
+                </td>
+                <td class="py-3 px-2 text-center">
+                    <button class="remove-product text-red-500 hover:text-red-700 p-2 rounded-lg hover:bg-red-50 transition-colors">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            `;
+            
+            tbody.appendChild(row);
+            
+            // Add event listeners to the new row
+            const inputs = row.querySelectorAll('input, select, textarea');
+            inputs.forEach(input => {
+                input.addEventListener('change', () => updateProduct(rowId));
+                input.addEventListener('input', () => updateProduct(rowId));
+            });
+            
+            const removeBtn = row.querySelector('.remove-product');
+            removeBtn.addEventListener('click', () => removeProduct(rowId));
+            
+            updateSummary();
+        }
+
+        function updateProduct(id) {
+            const productIndex = products.findIndex(p => p.id === id);
+            if (productIndex === -1) return;
+            
+            const row = document.getElementById(`product-${id}`);
+            const product = products[productIndex];
+            
+            product.description = row.querySelector('textarea').value;
+            product.unit = row.querySelector('td:nth-child(2) select').value;
+            product.quantity = parseFloat(row.querySelector('td:nth-child(3) input').value) || 0;
+            product.price = parseFloat(row.querySelector('td:nth-child(4) input').value) || 0;
+            product.discountType = row.querySelector('td:nth-child(5) select').value;
+            product.discountValue = parseFloat(row.querySelector('td:nth-child(5) input').value) || 0;
+            
+            // Update subtotal display
+            const subtotalElement = row.querySelector('.product-subtotal');
+            subtotalElement.textContent = formatCurrency(calculateSubtotal(product));
+            
+            updateSummary();
+        }
+
+        function removeProduct(id) {
+            const productIndex = products.findIndex(p => p.id === id);
+            if (productIndex === -1) return;
+            
+            products.splice(productIndex, 1);
+            const row = document.getElementById(`product-${id}`);
+            
+            row.style.transition = 'opacity 0.3s ease';
+            row.style.opacity = '0';
+            
+            setTimeout(() => {
+                row.remove();
+                updateSummary();
+            }, 300);
+        }
+
+        // Calculation functions
+        function calculateSubtotal(product) {
+            const subtotal = product.quantity * product.price;
+            let discount = 0;
+            
+            if (product.discountType === 'percentage') {
+                discount = subtotal * (product.discountValue / 100);
+            } else {
+                discount = product.discountValue;
+            }
+            
+            return Math.max(0, subtotal - discount);
+        }
+
+        function calculateTotals() {
+            let subtotal = 0;
+            let totalDiscount = 0;
+            
+            products.forEach(product => {
+                const productSubtotal = product.quantity * product.price;
+                let productDiscount = 0;
+                
+                if (product.discountType === 'percentage') {
+                    productDiscount = productSubtotal * (product.discountValue / 100);
+                } else {
+                    productDiscount = product.discountValue;
+                }
+                
+                subtotal += productSubtotal;
+                totalDiscount += productDiscount;
+            });
+            
+            const netSubtotal = subtotal - totalDiscount;
+            const taxRate = parseFloat(document.getElementById('tax-rate').value) || 0;
+            const pricesIncludeTax = document.getElementById('prices-include-tax').checked;
+            
+            let tax, total;
+            
+            if (pricesIncludeTax) {
+                const taxMultiplier = taxRate / (100 + taxRate);
+                tax = netSubtotal * taxMultiplier;
+                total = netSubtotal;
+            } else {
+                tax = netSubtotal * (taxRate / 100);
+                total = netSubtotal + tax;
+            }
+            
+            return {
+                subtotal: subtotal,
+                discount: totalDiscount,
+                tax: tax,
+                total: total
+            };
+        }
+
+        function updateSummary() {
+            const totals = calculateTotals();
+            const currency = document.getElementById('currency').value;
+            const currencySymbol = getCurrencySymbol(currency);
+            
+            document.getElementById('summary-subtotal').textContent = `${currencySymbol} ${formatNumber(totals.subtotal)}`;
+            document.getElementById('summary-discount').textContent = `- ${currencySymbol} ${formatNumber(totals.discount)}`;
+            document.getElementById('summary-tax').textContent = `${currencySymbol} ${formatNumber(totals.tax)}`;
+            document.getElementById('summary-total').textContent = `${currencySymbol} ${formatNumber(totals.total)}`;
+        }
+
+        // Preview and PDF generation
+        function updatePreview() {
+            const previewContainer = document.querySelector('#invoice-preview-container .invoice-preview');
+            
+            // Generate preview HTML
+            const previewHTML = generateInvoiceHTML();
+            previewContainer.innerHTML = previewHTML;
+        }
+
+        function generateInvoiceHTML() {
+            const totals = calculateTotals();
+            const currency = document.getElementById('currency').value;
+            const currencySymbol = getCurrencySymbol(currency);
+            const currencyName = getCurrencyName(currency);
+            
+            const companyName = document.getElementById('company-name').value;
+            const companyTaxId = document.getElementById('company-tax-id').value;
+            const companyAddress = document.getElementById('company-address').value;
+            const companyPhone = document.getElementById('company-phone').value;
+            const companyEmail = document.getElementById('company-email').value;
+            
+            const clientName = document.getElementById('client-name').value;
+            const clientTaxId = document.getElementById('client-tax-id').value;
+            const clientAddress = document.getElementById('client-address').value;
+            const clientContact = document.getElementById('client-contact').value;
+            
+            const invoiceNumber = document.getElementById('invoice-number').value;
+            const invoiceDate = new Date(document.getElementById('invoice-date').value).toLocaleDateString('es-PE');
+            const paymentMethod = document.getElementById('payment-method').value;
+            const paymentCondition = document.getElementById('payment-condition').value;
+            const paymentDays = document.getElementById('payment-days').value;
+            const notes = document.getElementById('notes').value;
+            
+            let companyContact = '';
+            if (companyPhone && companyEmail) {
+                companyContact = `Tel: ${companyPhone} | ${companyEmail}`;
+            } else if (companyPhone) {
+                companyContact = `Tel: ${companyPhone}`;
+            } else if (companyEmail) {
+                companyContact = companyEmail;
+            }
+            
+            let paymentConditionText = paymentCondition;
+            if (paymentCondition === 'Crédito' && paymentDays) {
+                paymentConditionText += ` (${paymentDays} días)`;
+            }
+            
+            let productsHTML = '';
+            products.forEach(product => {
+                const subtotal = calculateSubtotal(product);
+                const discountText = product.discountValue > 0 ? 
+                    (product.discountType === 'percentage' ? 
+                        `${product.discountValue}%` : 
+                        `${currencySymbol} ${formatNumber(product.discountValue)}`) : 
+                    '-';
+                
+                productsHTML += `
+                    <tr class="border-b border-gray-100">
+                        <td class="py-3 px-4 text-sm">${product.description || 'Sin descripción'}</td>
+                        <td class="py-3 px-4 text-sm text-center">${product.unit}</td>
+                        <td class="py-3 px-4 text-sm text-center">${product.quantity}</td>
+                        <td class="py-3 px-4 text-sm text-right">${currencySymbol} ${formatNumber(product.price)}</td>
+                        <td class="py-3 px-4 text-sm text-center">${discountText}</td>
+                        <td class="py-3 px-4 text-sm text-right font-medium">${currencySymbol} ${formatNumber(subtotal)}</td>
+                    </tr>
+                `;
+            });
+            
+            return `
+                <div class="flex justify-between items-start mb-8">
+                    <div class="flex-1">
+                        ${logoDataUrl ? `<img src="${logoDataUrl}" alt="Logo" class="logo-preview mb-4">` : ''}
+                    </div>
+                    <div class="text-right">
+                        <h1 class="text-3xl font-bold text-gray-800 mb-2">FACTURA</h1>
+                        <div class="text-lg">
+                            <p class="text-gray-600">N°: <span class="text-gray-800 font-mono font-bold">${invoiceNumber}</span></p>
+                            <p class="text-gray-600">Fecha: <span class="text-gray-800">${invoiceDate}</span></p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                    <div>
+                        <h2 class="text-lg font-bold text-gray-800 border-b-2 border-blue-500 pb-2 mb-3">EMISOR</h2>
+                        <div class="space-y-1">
+                            <p class="font-semibold text-gray-800">${companyName}</p>
+                            <p class="text-sm text-gray-600">RUC: ${companyTaxId}</p>
+                            ${companyAddress ? `<p class="text-sm text-gray-600">${companyAddress}</p>` : ''}
+                            ${companyContact ? `<p class="text-sm text-gray-600">${companyContact}</p>` : ''}
+                        </div>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-bold text-gray-800 border-b-2 border-green-500 pb-2 mb-3">CLIENTE</h2>
+                        <div class="space-y-1">
+                            <p class="font-semibold text-gray-800">${clientName}</p>
+                            ${clientTaxId ? `<p class="text-sm text-gray-600">${clientTaxId.length <= 11 ? 'DNI' : 'RUC'}: ${clientTaxId}</p>` : ''}
+                            ${clientAddress ? `<p class="text-sm text-gray-600">${clientAddress}</p>` : ''}
+                            ${clientContact ? `<p class="text-sm text-gray-600">${clientContact}</p>` : ''}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-6 p-4 bg-gray-50 rounded-lg">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                        <div>
+                            <span class="font-semibold text-gray-700">Método de pago:</span>
+                            <span class="text-gray-600 ml-1">${paymentMethod}</span>
+                        </div>
+                        <div>
+                            <span class="font-semibold text-gray-700">Condición:</span>
+                            <span class="text-gray-600 ml-1">${paymentConditionText}</span>
+                        </div>
+                        <div>
+                            <span class="font-semibold text-gray-700">Moneda:</span>
+                            <span class="text-gray-600 ml-1">${currencyName} (${currency})</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-8">
+                    <table class="min-w-full bg-white border border-gray-200 rounded-lg overflow-hidden">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="py-3 px-4 text-left text-sm font-semibold text-gray-700">Descripción</th>
+                                <th class="py-3 px-4 text-center text-sm font-semibold text-gray-700">Unidad</th>
+                                <th class="py-3 px-4 text-center text-sm font-semibold text-gray-700">Cantidad</th>
+                                <th class="py-3 px-4 text-right text-sm font-semibold text-gray-700">Precio Unit.</th>
+                                <th class="py-3 px-4 text-center text-sm font-semibold text-gray-700">Descuento</th>
+                                <th class="py-3 px-4 text-right text-sm font-semibold text-gray-700">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${productsHTML}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="flex justify-end mb-8">
+                    <div class="w-full md:w-1/2 lg:w-1/3">
+                        <div class="bg-gray-50 rounded-lg p-4 space-y-2">
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-600">Subtotal:</span>
+                                <span class="font-medium">${currencySymbol} ${formatNumber(totals.subtotal)}</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-600">Descuentos:</span>
+                                <span class="text-red-600">- ${currencySymbol} ${formatNumber(totals.discount)}</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-600">IGV (${document.getElementById('tax-rate').value}%):</span>
+                                <span class="font-medium">${currencySymbol} ${formatNumber(totals.tax)}</span>
+                            </div>
+                            <div class="border-t border-gray-300 pt-2">
+                                <div class="flex justify-between text-lg font-bold">
+                                    <span class="text-gray-800">Total:</span>
+                                    <span class="text-blue-600">${currencySymbol} ${formatNumber(totals.total)}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                ${notes ? `
+                    <div class="mb-8 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500">
+                        <h3 class="text-sm font-semibold text-blue-800 mb-2">Observaciones:</h3>
+                        <p class="text-sm text-blue-700 whitespace-pre-line">${notes}</p>
+                    </div>
+                ` : ''}
+
+                <div class="mt-8 pt-4 border-t border-gray-200 text-center">
+                    <p class="text-xs text-gray-500">Esta factura es un documento legal emitido electrónicamente.</p>
+                    <p class="text-xs text-gray-500 mt-1">Gracias por su preferencia.</p>
+                </div>
+            `;
+        }
+
+        // PDF Generation using html2canvas to maintain exact visual appearance
+        async function generatePDF() {
+            if (!validateProducts()) return;
+            
+            // Show loading state
+            const btn = document.getElementById('generate-pdf');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Generando PDF...';
+            btn.disabled = true;
+            
+            try {
+                // Get the invoice preview element
+                const invoiceElement = document.querySelector('.invoice-preview');
+                
+                if (!invoiceElement) {
+                    throw new Error('No se encontró la previsualización de la factura');
+                }
+                
+                // Configure html2canvas options for better quality
+                const canvas = await html2canvas(invoiceElement, {
+                    scale: 2, // Higher resolution
+                    useCORS: true,
+                    allowTaint: true,
+                    backgroundColor: '#ffffff',
+                    width: invoiceElement.scrollWidth,
+                    height: invoiceElement.scrollHeight,
+                    onclone: function(clonedDoc) {
+                        // Ensure all images are loaded in the cloned document
+                        const clonedElement = clonedDoc.querySelector('.invoice-preview');
+                        if (clonedElement) {
+                            clonedElement.style.transform = 'none';
+                            clonedElement.style.boxShadow = 'none';
+                            clonedElement.style.border = 'none';
+                        }
+                    }
+                });
+                
+                // Create PDF
+                const imgData = canvas.toDataURL('image/png');
+                
+                // Calculate dimensions
+                const pdfWidth = 210; // A4 width in mm
+                const pdfHeight = 297; // A4 height in mm
+                const imgWidth = pdfWidth - 20; // Leave 10mm margin on each side
+                const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                
+                // Create PDF document
+                const pdf = new jsPDF({
+                    orientation: imgHeight > pdfHeight - 20 ? 'portrait' : 'portrait',
+                    unit: 'mm',
+                    format: 'a4'
+                });
+                
+                // Add the image to PDF
+                let yPosition = 10; // Start 10mm from top
+                
+                if (imgHeight > pdfHeight - 20) {
+                    // If image is too tall, we need to split it across multiple pages
+                    const pageHeight = pdfHeight - 20; // Available height per page
+                    const totalPages = Math.ceil(imgHeight / pageHeight);
+                    
+                    for (let i = 0; i < totalPages; i++) {
+                        if (i > 0) {
+                            pdf.addPage();
+                        }
+                        
+                        const sourceY = i * pageHeight * (canvas.height / imgHeight);
+                        const sourceHeight = Math.min(pageHeight * (canvas.height / imgHeight), canvas.height - sourceY);
+                        
+                        // Create a temporary canvas for this page section
+                        const tempCanvas = document.createElement('canvas');
+                        tempCanvas.width = canvas.width;
+                        tempCanvas.height = sourceHeight;
+                        const tempCtx = tempCanvas.getContext('2d');
+                        
+                        tempCtx.drawImage(canvas, 0, sourceY, canvas.width, sourceHeight, 0, 0, canvas.width, sourceHeight);
+                        
+                        const tempImgData = tempCanvas.toDataURL('image/png');
+                        const tempImgHeight = (sourceHeight * imgWidth) / canvas.width;
+                        
+                        pdf.addImage(tempImgData, 'PNG', 10, yPosition, imgWidth, tempImgHeight);
+                    }
+                } else {
+                    // Image fits in one page
+                    pdf.addImage(imgData, 'PNG', 10, yPosition, imgWidth, imgHeight);
+                }
+                
+                // Set PDF metadata
+                const invoiceNumber = document.getElementById('invoice-number').value;
+                const companyName = document.getElementById('company-name').value;
+                
+                pdf.setProperties({
+                    title: `Factura ${invoiceNumber}`,
+                    subject: 'Factura electrónica',
+                    author: companyName,
+                    keywords: 'factura, invoice, billing',
+                    creator: 'Sistema de Facturación Electrónica'
+                });
+                
+                // Save the PDF
+                pdf.save(`Factura_${invoiceNumber}.pdf`);
+                
+            } catch (error) {
+                console.error('Error generating PDF:', error);
+                alert('Error al generar el PDF. Por favor, inténtalo de nuevo.');
+            } finally {
+                // Restore button
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        // Reset form
+        function resetForm() {
+            if (confirm('¿Está seguro que desea crear una nueva factura? Todos los datos actuales se perderán.')) {
+                // Reset all form fields
+                document.querySelectorAll('input, select, textarea').forEach(field => {
+                    if (field.type === 'checkbox') {
+                        field.checked = false;
+                    } else if (field.id !== 'invoice-number') {
+                        field.value = '';
+                    }
+                });
+                
+                // Clear logo
+                removeLogo();
+                
+                // Clear products
+                products = [];
+                document.getElementById('products-table-body').innerHTML = '';
+                
+                // Reset to step 1
+                currentStep = 1;
+                updateStepDisplay();
+                
+                // Reinitialize
+                initForm();
+            }
+        }
+
+        // Utility functions
+        function formatNumber(number) {
+            return number.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        }
+
+        function formatCurrency(amount) {
+            const currency = document.getElementById('currency').value;
+            const symbol = getCurrencySymbol(currency);
+            return `${symbol} ${formatNumber(amount)}`;
+        }
+
+        function getCurrencySymbol(currencyCode) {
+            const symbols = {
+                'USD': '$', 'PEN': 'S/', 'EUR': '€', 'GBP': '£', 'JPY': '¥',
+                'CAD': 'CA$', 'AUD': 'A$', 'CHF': 'CHF', 'CNY': '¥', 'MXN': 'MX$',
+                'BRL': 'R$', 'ARS': '$', 'CLP': 'CLP$', 'COP': 'COL$'
+            };
+            return symbols[currencyCode] || currencyCode;
+        }
+
+        function getCurrencyName(currencyCode) {
+            const names = {
+                'USD': 'Dólares', 'PEN': 'Soles', 'EUR': 'Euros', 'GBP': 'Libras', 'JPY': 'Yenes',
+                'CAD': 'Dólares Canadienses', 'AUD': 'Dólares Australianos', 'CHF': 'Francos Suizos',
+                'CNY': 'Yuanes', 'MXN': 'Pesos Mexicanos', 'BRL': 'Reales', 'ARS': 'Pesos Argentinos',
+                'CLP': 'Pesos Chilenos', 'COP': 'Pesos Colombianos'
+            };
+            return names[currencyCode] || currencyCode;
+        }
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', initForm);
+    </script>
+</body>
+</html>
